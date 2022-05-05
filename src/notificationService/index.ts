@@ -9,22 +9,33 @@ export interface MessageInfoType {
 export abstract class NotificationServiceClass {
     abstract sendMessage(messageInfo: MessageInfoType): Promise<void>
 }
-export class NotificationService implements NotificationServiceClass{
 
-    // map to handle automatic switching depending on an initialization type
-    notificationClassMap: Map<string, NotificationServiceClass> = new Map([
-        ['slack', new SlackService()],
-        ['sns', new SNSService()]
-    ])
+export interface NotificationClientConfig {
+    type?: 'sns' | 'slack',
+    awsRegion: string
+
+}
+export class NotificationService implements NotificationServiceClass{
 
     // store of the notification class
     client: NotificationServiceClass
     
-    constructor(notificationType?: string) {
-        this.client = notificationType ? this.notificationClassMap.get(notificationType) : this.notificationClassMap.get('sns')
+    constructor(notificationConfig?: NotificationClientConfig) {
+        this.client = this.instanceNotificationClassFromType(notificationConfig)
     }
 
-    async sendMessage({}: MessageInfoType){
-        console.log('Notification sent')
+    // mapping to handle automatic switching depending on an initialization type
+    instanceNotificationClassFromType(notificationConfig?: NotificationClientConfig){
+
+        const notificationClass = {
+            slack: SlackService,
+            sns: SNSService
+        }
+
+        const classType = notificationConfig?.type ?? 'sns'
+        return new notificationClass[classType](notificationConfig)
+    }
+    async sendMessage(messageInfo: MessageInfoType){
+        await this.client.sendMessage(messageInfo)
     }
 }

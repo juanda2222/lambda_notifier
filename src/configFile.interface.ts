@@ -1,3 +1,3 @@
 export interface ConfigFile {
-    topicArn: string 
+    snsTopicArn: string 
 }

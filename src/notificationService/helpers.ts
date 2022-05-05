@@ -2,7 +2,7 @@ import { CloudWatchLogsDecodedData } from "aws-lambda"
 import { ConfigFile } from "../configFile.interface"
 
 export const getTopicArnFromConfigFile = (configFile: ConfigFile) => {
-    return configFile.topicArn
+    return configFile.snsTopicArn
 }
 
 export const getSubjectFromCloudWatchLog = (decodedLog: CloudWatchLogsDecodedData) => {
