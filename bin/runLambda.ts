@@ -1,4 +1,4 @@
-import LambdaNotifier from '..'
+import LambdaNotifier from '../src/lambda/notifier'
 import { Context } from 'aws-lambda/handler'
 
 const main = async () => {
