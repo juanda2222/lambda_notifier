@@ -1,0 +1,146 @@
+variables:
+  REPOSITORY_URL: $URI/$REPOSITORY_NAME_AIRFLOW
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_TOKEN: $DOCKER_TOKEN
+  DOCKER_USER: $DOCKER_USER
+
+before_script:
+  - docker login -u $DOCKER_USER -p $DOCKER_TOKEN
+
+.create_delta_s3_bucket: &create_delta_s3_bucket
+- echo "-$CI_COMMIT_SHORT_SHA-"
+
+- >
+  if ! aws s3api wait bucket-exists --bucket $stack-delta-etl-scripts --region $AWS_REGION; then
+    echo "creating s3 bucket for etl scripts"
+    aws s3 mb s3://$stack-delta-etl-scripts --region $AWS_REGION
+  fi
+
+.build_docker: &build_docker 
+- RESPONSE=$(aws ecr list-images  --repository-name $REPOSITORY_NAME_AIRFLOW --query "imageIds[?imageTag == '$CI_COMMIT_SHORT_SHA'].[imageTag]" --output text --region $AWS_REGION)
+- echo "-$RESPONSE-"
+- echo "-$CI_COMMIT_SHORT_SHA-"
+
+- >
+  if [ "$RESPONSE" == "$CI_COMMIT_SHORT_SHA" ]; then
+    
+    echo " =============== This commit ==> $CI_COMMIT_SHORT_SHA already has a built Docker image in ECR ============ "
+    echo "skipping Build process" 
+  
+  else
+    docker build --no-cache -t $REPOSITORY_URL .
+    docker tag $REPOSITORY_URL:latest $REPOSITORY_URL:$CI_COMMIT_SHORT_SHA
+    docker push $REPOSITORY_URL:$CI_COMMIT_SHORT_SHA
+  fi
+
+.deploy_docker: &deploy_docker
+- docker pull $REPOSITORY_URL:$CI_COMMIT_SHORT_SHA
+- docker tag $REPOSITORY_URL:$CI_COMMIT_SHORT_SHA $REPOSITORY_URL:$Env_Tag
+- docker push $REPOSITORY_URL:$Env_Tag
+
+stages:
+ - test
+ - deploy_latest
+ - deploy_prod
+
+include:
+  - template: Code-Quality.gitlab-ci.yml
+
+code_quality:
+  script:
+    - docker login -u $DOCKER_USER -p $DOCKER_TOKEN
+  image: 561491151124.dkr.ecr.us-west-2.amazonaws.com/gitlab-runner:docker
+  artifacts:
+    paths: [gl-code-quality-report.json]
+    expire_in: 48 hrs
+  rules:
+      - if: '$CI_MERGE_REQUEST_ID || $CI_COMMIT_BRANCH == "develop"'
+  tags:
+    - k8s
+
+deploy_latest:
+ stage: deploy_latest
+ image: 561491151124.dkr.ecr.us-west-2.amazonaws.com/gitlab-runner:docker
+ services:
+  - docker:19.03.12-dind
+ script:
+  - export Env_Tag="latest"
+  - $(aws ecr get-login --registry-ids 561491151124 --region $AWS_REGION --no-include-email)
+  - *build_docker
+  - *deploy_docker
+  - ecs deploy Cluster-airflow-test airflow --tag $Env_Tag --region ${AWS_REGION}
+ rules:
+  - if: '$CI_COMMIT_BRANCH == "develop"'
+ tags:
+  - k8s
+
+deploy_cf_latest:
+ stage: deploy_latest
+ image: 561491151124.dkr.ecr.us-west-2.amazonaws.com/gitlab-runner:docker
+ services:
+  - docker:19.03.12-dind
+ before_script:
+  - apk update && apk add bash
+ script:
+  - npm --version
+  - node -v
+  - cd lambdas/app-funnel-data
+  - npm install
+  - cd ../..
+  - cd lambdas/daily-reports
+  - npm install
+  - cd ../..
+  - export stack="airflow-test-data-lake"
+  - *create_delta_s3_bucket
+  - aws s3 cp s3-jars/delta-core_2.12-1.0.0.jar s3://$stack-delta-etl-scripts
+  - aws s3 cp glue-scripts/ingestion/batch_ingestion_etl.py s3://$stack-delta-etl-scripts/ingestion/batch_ingestion_etl.py
+  - aws cloudformation package --region $AWS_REGION --template-file glue-resources.yml --s3-bucket $stack --output-template-file out.yml
+  - aws cloudformation deploy --region $AWS_REGION --parameter-overrides IngestionDB=airflow_test_data_lake AirflowUrl=https://airflow.test.instride.com --template-file out.yml --stack-name $stack --capabilities "CAPABILITY_IAM"
+ rules:
+  - if: '$CI_COMMIT_BRANCH == "develop"'
+ tags:
+  - Latest
+
+deploy_prod:
+  stage: deploy_prod
+  image: 561491151124.dkr.ecr.us-west-2.amazonaws.com/gitlab-runner:docker
+  services:
+    - docker:19.03.12-dind
+  script:
+    - export Env_Tag="prod"
+    - $(aws ecr get-login --registry-ids 561491151124 --region $AWS_REGION --no-include-email)
+    - *build_docker
+    - *deploy_docker
+    - ecs deploy Cluster-airflow-env airflow-env --tag $Env_Tag --region ${AWS_REGION}
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  tags:
+    - k8s
+
+deploy_cf_prod:
+ stage: deploy_prod
+ image: 561491151124.dkr.ecr.us-west-2.amazonaws.com/gitlab-runner:docker
+ services:
+  - docker:19.03.12-dind
+ before_script:
+  - apk update && apk add bash
+ script:
+  - npm --version
+  - node -v
+  - cd lambdas/app-funnel-data
+  - npm install
+  - cd ../..
+  - cd lambdas/daily-reports
+  - npm install
+  - cd ../..
+  - export stack="airflow-env-data-lake"
+  - *create_delta_s3_bucket
+  - aws s3 cp s3-jars/delta-core_2.12-1.0.0.jar s3://$stack-delta-etl-scripts
+  - aws s3 cp glue-scripts/ingestion/batch_ingestion_etl.py s3://$stack-delta-etl-scripts/ingestion/batch_ingestion_etl.py
+  - aws cloudformation package --region $AWS_REGION --template-file glue-resources.yml --s3-bucket $stack --output-template-file out.yml
+  - aws cloudformation deploy --region $AWS_REGION --parameter-overrides IngestionDB=airflow_env_data_lake AirflowUrl=https://airflow.corp.instride.com --template-file out.yml --stack-name $stack --capabilities "CAPABILITY_IAM"
+ rules:
+  - if: '$CI_COMMIT_BRANCH == "master"'
+ tags:
+  - Latest
