@@ -13,7 +13,7 @@ export class SNSService implements NotificationServiceClass{
         let params = {
             Message: JSON.stringify(logEvents), 
             Subject: getSubjectFromCloudWatchLog(decodedLog),
-            TopicArn: getTopicArnFromConfigFile(configFile)
+            TopicArn: getTopicArnFromConfigFile(configFile)[0] // TODO: properly parse this as a list
         };
 
         const result = await this.sns.publish(params).promise()
