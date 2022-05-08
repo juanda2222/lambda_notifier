@@ -1,3 +1,5 @@
 export interface ConfigFile {
-    snsTopicArn: string 
+    snsTopicArn: string,
+    logGroupName: string,
+    filterPattern: string
 }

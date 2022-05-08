@@ -30,7 +30,7 @@ const lambdaNotifier: CloudWatchLogsHandler = async (event) => {
 
     // send message using the notification wrapper
     let notificationService = new NotificationService({awsRegion: CONFIG.AWS_REGION});
-    await notificationService.sendMessage({decodedLog, configFile: {snsTopicArn: 'arn:aws:sns:us-east-1:133590650843:test_topic_for_notification'}})
+    await notificationService.sendMessage({decodedLog, configFile: configContent})
     console.log(`Message sent to ${teamName} team`)
     
     return;
