@@ -1,19 +1,29 @@
+import { IsIn, IsString, ValidateNested } from "class-validator"
+
 export type NotificationType = 'sns' | 'slack'
 export type NotificationData = SlackNotificationData | SNSNotificationData
 
-export interface SlackNotificationData {}
 
-export interface SNSNotificationData {
+export class SlackNotificationData {}
+export class SNSNotificationData {
+    @IsString()
     snsArn: string
 }
-
-export interface NotificationRule {
+export class NotificationRule {
+    @IsString()
     ruleName: string
+
+    @IsString()
     filterPattern: string
+
+    @IsIn(["'sns'", " 'slack'"])
     notificationType: NotificationType
-    notificationData: SNSNotificationData
+
+    @ValidateNested()
+    SNSNotificationData: NotificationData
 }
 
-export interface ConfigFile {
-    rules: NotificationRule[],
+export class ConfigFile {
+    @ValidateNested()
+    rules: NotificationRule[];
 }

@@ -3,6 +3,7 @@ import { S3Handler } from 'aws-lambda';
 import { ConfigFile } from '../../configFile.class';
 import  { S3, CloudWatchLogs } from 'aws-sdk';
 import { CONFIG } from '../../config';
+import { validateSync } from 'class-validator';
 
 const FILTER_NAME_PREFIX = "auto-notification--"
 const formatFilterNameFromConfigRuleName = (configRuleName: string) => {
@@ -29,6 +30,7 @@ const lambdaUpdater: S3Handler = async (event) => {
     let cwl = new CloudWatchLogs({apiVersion: '2014-03-28', region: CONFIG.AWS_REGION});
     let s3 = new S3({ apiVersion: '2006-03-01' });
 
+    // ----------- DELETE TRIGGERS ROUTINE -----------------
     // use the object key to delete the trigger if the file was deleted
     if (event.Records[0].eventName == "ObjectRemoved:Delete") {
         console.log("DELETING TRIGGERS")
@@ -59,14 +61,13 @@ const lambdaUpdater: S3Handler = async (event) => {
     }; 
     let configContent: ConfigFile;
     const configResponse = await s3.getObject(fileRequestParams).promise();
-    console.log('Config response:', configResponse);
     configContent = JSON.parse(configResponse.Body.toString('utf-8'))
-    console.log(configContent)
 
 
-    // TODO: validate the structure of the file
+    // validate the structure of the file
+    validateSync(configContent)
 
-
+    // ----------- ADD TRIGGERS ROUTINE -----------------
     // process all filters inside the file
     console.log("CREATING TRIGGERS")
     const filtersCreated = await Promise.all(configContent.rules.map(async rule => {
