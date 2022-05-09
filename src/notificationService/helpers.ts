@@ -1,8 +1,8 @@
 import { CloudWatchLogsDecodedData } from "aws-lambda"
-import { ConfigFile } from "../configFile.interface"
+import { ConfigFile } from "../configFile.class"
 
 export const getTopicArnFromConfigFile = (configFile: ConfigFile) => {
-    return configFile.filters.map(filterData => filterData.notificationData.snsArn)
+    return configFile.rules.map(ruleData => ruleData.notificationData.snsArn)
 }
 
 export const getSubjectFromCloudWatchLog = (decodedLog: CloudWatchLogsDecodedData) => {

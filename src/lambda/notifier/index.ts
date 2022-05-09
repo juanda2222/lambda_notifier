@@ -4,7 +4,7 @@ import * as zlib from 'zlib';
 import { S3 } from "aws-sdk";
 import { CONFIG } from '../../config';
 import { NotificationService } from '../../notificationService';
-import { ConfigFile } from '../../configFile.interface';
+import { ConfigFile } from '../../configFile.class';
 
 const getConfigPathFromTeamName = (teamName: string) => {
     return `${teamName}`

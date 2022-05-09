@@ -7,12 +7,13 @@ export interface SNSNotificationData {
     snsArn: string
 }
 
-export interface FilterDescription {
-		filterPattern: string
-		notificationType: NotificationType
-		notificationData: SNSNotificationData
+export interface NotificationRule {
+    ruleName: string
+    filterPattern: string
+    notificationType: NotificationType
+    notificationData: SNSNotificationData
 }
 
 export interface ConfigFile {
-    filters: FilterDescription[],
+    rules: NotificationRule[],
 }

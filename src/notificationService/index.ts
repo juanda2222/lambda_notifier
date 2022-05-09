@@ -1,5 +1,5 @@
 import { CloudWatchLogsDecodedData } from "aws-lambda";
-import { ConfigFile } from "../configFile.interface";
+import { ConfigFile } from "../configFile.class";
 import { SlackService } from "./slackService";
 import { SNSService } from "./snsService";
 export interface MessageInfoType {
