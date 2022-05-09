@@ -14,6 +14,7 @@ const getConfigPathFromTeamName = (teamName: string) => {
 const lambdaNotifier: CloudWatchLogsHandler = async (event) => {
     
     // parse the receiving message
+    console.log("SENDING NOTIFICATION")
     const payload = Buffer.from(event.awslogs.data, 'base64');
     const decodedLog: CloudWatchLogsDecodedData = JSON.parse(zlib.unzipSync(payload).toString())
     const teamName = decodedLog.logGroup
@@ -34,9 +35,10 @@ const lambdaNotifier: CloudWatchLogsHandler = async (event) => {
     // send message using the notification wrapper
     let notificationService = new NotificationService({awsRegion: CONFIG.AWS_REGION});
     await notificationService.sendMessage({decodedLog, configFile: configContent})
-    console.log(`Message sent to ${teamName} team`)
+    console.log(`Message SENT to ${teamName} team`)
     
     return;
 };
+
 exports.handler = lambdaNotifier
 export default lambdaNotifier

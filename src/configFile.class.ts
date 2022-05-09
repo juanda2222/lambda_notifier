@@ -20,7 +20,7 @@ export class NotificationRule {
     notificationType: NotificationType
 
     @ValidateNested()
-    SNSNotificationData: NotificationData
+    notificationData: NotificationData
 }
 
 export class ConfigFile {
