@@ -76,4 +76,23 @@ export const mockS3FileDeletedEvent = {
   ]
 }
 
-
+export const mockCwlDescribeSubscriptionFiltersResponse = {
+    subscriptionFilters: [
+      {
+        filterName: 'auto-notification--testingFile',
+        logGroupName: 'test_log_group',
+        filterPattern: 'FILTER THIS',
+        destinationArn: 'arn:aws:lambda:us-east-1:1390650843:function:test_function_from_log',
+        distribution: 'ByLogStream',
+        creationTime: 1651968642639
+      },
+      {
+        filterName: 'my_lambda_filter',
+        logGroupName: 'test_log_group',
+        filterPattern: 'no idea',
+        destinationArn: 'arn:aws:lambda:us-east-1:1330650843:function:test_function_from_log',
+        distribution: 'ByLogStream',
+        creationTime: 1651603151760
+      }
+    ]
+  }
