@@ -1,6 +1,6 @@
-import LambdaUpdater from '../src/lambda/updater'
+import LambdaUpdater from '../src/lambdas/updater'
 import { Context } from 'aws-lambda/handler'
-import { mockS3FileCreatedEvent, mockS3FileDeletedEvent } from '../src/lambda/updater/mocks'
+import { mockS3FileCreatedEvent, mockS3FileDeletedEvent } from '../src/lambdas/updater/mocks'
 
 const main = async () => {
 
