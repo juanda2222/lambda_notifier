@@ -1,67 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: This template sets up all AWS Glue resources for the InStride Data Lake
+Description: This template sets up all resources for the lambda notification system 
 
-Parameters:
-  DataLakeDatabaseNameSuffix:
-    Type: String
-    Default: database
-    Description: Suffix of the AWS Glue database name
+# Parameters:
+  # InStrideServicesAccountID:
+  #   Type: String
+  #   Default: '{{resolve:ssm:InStrideServicesAccountID:1}}'
+  #   Description: 12-digit AWS account ID
 
-  ETLOutputPrefix:
-    Type: String
-    Default: data
-    Description: Name of the S3 output path for ETL Jobs
-
-  DataLakeBucketNameSuffix:
-    Type: String
-    Default: storage
-    Description: Suffix to appended to the name of the S3 bucket in which the data will be uploaded
-
-  AirflowUrl:
-    Type: String
-    Default: http://localhost:8080
-    Description: URL of the Airflow server that contains all DAGs
-
-  IngestionDB:
-    Description: Name of the athena ingestion database
-    Type: String
-    Default: 'delta_ingestion'
-
-  InStrideServicesAccountID:
-    Type: String
-    Default: '{{resolve:ssm:InStrideServicesAccountID:1}}'
-    Description: 12-digit AWS account ID
-
-  UvaAcademicPartnerId:
-    Type: String
-    Default: '785983a4-dfa0-4d57-bc54-7af4f8a89f47'
-    Description: Academic Partner ID of UVA
-
-  MemphisAcademicPartnerId:
-    Type: String
-    Default: '3a7d5394-c883-432f-9fec-73419a8391c2'
-    Description: Academic Partner ID of Memphis
-
-  CunyAcademicPartnerId:
-    Type: String
-    Default: '0779a70e-8dee-447e-a2bd-eb007260bf00'
-    Description: Academic Partner ID of CUNY
-
-  MadisonAcademicPartnerId:
-    Type: String
-    Default: '5420539c-fe18-49dc-be3c-0d813aea4812'
-    Description: Academic Partner ID of UW-Madison
-
-  ASUAcademicPartnerId:
-    Type: String
-    Default: '0303d588-5758-4d17-a424-e01f1bfe2601'
-    Description: Academic Partner ID of ASU
-
-  BatchETLJobName:
-    Type: String
-    Default: 'delta_batch_ingestion_etl'
-    Description: Name of the Batch ETL Job
+  # UvaAcademicPartnerId:
+  #   Type: String
+  #   Default: '785983a4-dfa0-4d57-bc54-7af4f8a89f47'
+  #   Description: Academic Partner ID of UVA
 
 Globals:
   Function:
@@ -71,501 +21,530 @@ Globals:
 Resources:
   # -----START OF DELTA LAKE CONFIGURATIONS-----
 
-  DeltaLakeRawsBucket:
+  NotificationsConfigBucket:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
     Properties:
-      BucketName: !Sub '${AWS::StackName}-delta-raws'
+      BucketName: !Sub '${AWS::StackName}_notification-config'
 
-  DeltaLakeRawsBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref DeltaLakeRawsBucket
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:aws:iam::${InStrideServicesAccountID}:root'
-            Action:
-              - 's3:*'
-            Resource:
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-raws'
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-raws/*'
+# NotificationFromLogFunction:
+#     Type: AWS::Serverless::Function
+#     Properties:
+#       CodeUri: src/lambdas/notifier/index.ts
+#       Runtime: Node.js12.x
+#       Environment:
+#         Variables:
+#           BATCH_ETL_PROCESS: !Sub '${AWS::StackName}_notification-from-log'
+#       Handler: batch_ingestion_trigger.lambda_handler
+#       Policies:
+#         - CloudWatchFullAccess
+#         - Version: '2012-10-17'
+#           Statement:
+#             - Effect: Allow
+#               Action:
+#                 - glue:*
+#               Resource: '*'
 
-  InvokeDeltaBatchIngestionTriggerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: lambdas/glue-triggers/batch_ingestion_trigger.py
-      Runtime: python3.8
-      Environment:
-        Variables:
-          BATCH_ETL_PROCESS: !Sub '${AWS::StackName}_${BatchETLJobName}'
-      Events:
-        BatchIngestionTrigger:
-          Type: S3
-          Properties:
-            Bucket:
-              Ref: DeltaLakeRawsBucket
-            Events: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: suffix
-                    Value: _SUCCESS
-      Handler: batch_ingestion_trigger.lambda_handler
-      Policies:
-        - CloudWatchFullAccess
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - glue:*
-              Resource: '*'
 
-  DeltaLakeDeltasBucket:
-    Type: AWS::S3::Bucket
-    # DeletionPolicy: Retain
-    Properties:
-      BucketName: !Sub '${AWS::StackName}-delta-deltas'
 
-  DeltaLakeDeltasBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref DeltaLakeDeltasBucket
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:aws:iam::${InStrideServicesAccountID}:root'
-            Action:
-              - 's3:*'
-            Resource:
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-deltas'
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-deltas/*'
 
-  DeltaLakeIngestionBucket:
-    Type: AWS::S3::Bucket
-    # DeletionPolicy: Retain
-    Properties:
-      BucketName: !Sub '${AWS::StackName}-delta-ingestion'
 
-  DeltaLakeIngestionBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref DeltaLakeIngestionBucket
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:aws:iam::${InStrideServicesAccountID}:root'
-            Action:
-              - 's3:*'
-            Resource:
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-ingestion'
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-ingestion/*'
 
-  DeltaGlueJobRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - glue.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Action:
-                  - s3:GetBucketLocation
-                  - s3:ListBucket
-                  - s3:ListAllMyBuckets
-                  - s3:GetBucketAcl
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                  - s3:PutBucketNotification
-                  - athena:*
-                  - glue:*
-                Effect: Allow
-                Resource:
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-ingestion'
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-ingestion/*'
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-deltas'
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-deltas/*'
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-etl-scripts'
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-etl-scripts/*'
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-raws'
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-raws/*'
-              - Action:
-                  - cloudwatch:*
-                Effect: Allow
-                Resource:
-                  - '*'
-              - Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Effect: Allow
-                Resource:
-                  - 'arn:aws:logs:*:*:/aws-glue/*'
-                  - 'arn:aws:logs:*:*:/customlogs/*'
-      #ManagedPolicyArns:
-      #  - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
 
-  DeltaLakeIngestionDatabase:
-    Type: AWS::Glue::Database
-    Properties:
-      DatabaseInput:
-        Name: !Sub '${IngestionDB}_delta_ingestion'
-      CatalogId: !Ref AWS::AccountId
 
-  DeltaBatchETLJob:
-    Type: 'AWS::Glue::Job'
-    Properties:
-      Role: !GetAtt DeltaGlueJobRole.Arn
-      Name: !Sub '${AWS::StackName}_${BatchETLJobName}'
-      GlueVersion: '3.0'
-      Command:
-        'Name': 'glueetl'
-        'ScriptLocation': !Sub 's3://${AWS::StackName}-delta-etl-scripts/ingestion/batch_ingestion_etl.py'
-      DefaultArguments:
-        '--class': !Sub 'GlueApp'
-        '--job-bookmark-option': 'job-bookmark-enable'
-        '--enable-glue-datacatalog': ''
-        '--spark-event-logs-path': !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/tmp/spark-logs/'
-        '--conf': !Sub 'spark.delta.logStore.class=org.apache.spark.sql.delta.storage.S3SingleDriverLogStore --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog --conf spark.sql.sources.partitionOverwriteMode=dynamic'
-        '--extra-jars': !Sub 's3://${AWS::StackName}-delta-etl-scripts/delta-core_2.12-1.0.0.jar'
-        '--extra-py-files': !Sub 's3://${AWS::StackName}-delta-etl-scripts/delta-core_2.12-1.0.0.jar'
-        '--enable-continuous-cloudwatch-log': 'true'
-        '--enable-continuous-log-filter': 'true'
-        '--deltas_bucket': !Sub '${AWS::StackName}-delta-deltas'
-        '--raws_bucket': !Sub '${AWS::StackName}-delta-raws'
-        '--ingestion_bucket': !Sub '${AWS::StackName}-delta-ingestion'
-      ExecutionProperty:
-        MaxConcurrentRuns: 20
-      MaxRetries: 3
-      Description: 'Batch Ingestion ETL Job for delta lake'
-      WorkerType: 'G.1X'
-      NumberOfWorkers: 20
 
-  # -----END OF DELTA LAKE CONFIGURATIONS-----
 
-  DataLakeBucket:
-    Type: AWS::S3::Bucket
-    # DeletionPolicy: Retain
-    Properties:
-      BucketName: !Sub '${AWS::StackName}-${DataLakeBucketNameSuffix}'
 
-  DataLakeBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref DataLakeBucket
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:aws:iam::${InStrideServicesAccountID}:root'
-            Action:
-              - 's3:*'
-            Resource:
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}'
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}/*'
 
-  GlueJobRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - glue.amazonaws.com
-            Action:
-              - sts:AssumeRole
-      Policies:
-        - PolicyName: root
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Action:
-                  - s3:GetBucketLocation
-                  - s3:ListBucket
-                  - s3:ListAllMyBuckets
-                  - s3:GetBucketAcl
-                  - s3:GetObject
-                  - s3:PutObject
-                  - s3:DeleteObject
-                  - s3:PutBucketNotification
-                Effect: Allow
-                Resource:
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}'
-                  - !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}/*'
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
+  # DeltaLakeRawsBucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref DeltaLakeRawsBucket
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             AWS: !Sub 'arn:aws:iam::${InStrideServicesAccountID}:root'
+  #           Action:
+  #             - 's3:*'
+  #           Resource:
+  #             - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-raws'
+  #             - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-raws/*'
 
-  DataLakeDatabase:
-    Type: AWS::Glue::Database
-    Properties:
-      DatabaseInput:
-        Name: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      CatalogId: !Ref AWS::AccountId
+  # InvokeDeltaBatchIngestionTriggerFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: lambdas/glue-triggers/batch_ingestion_trigger.py
+  #     Runtime: python3.8
+  #     Environment:
+  #       Variables:
+  #         BATCH_ETL_PROCESS: !Sub '${AWS::StackName}_${BatchETLJobName}'
+  #     Events:
+  #       BatchIngestionTrigger:
+  #         Type: S3
+  #         Properties:
+  #           Bucket:
+  #             Ref: DeltaLakeRawsBucket
+  #           Events: s3:ObjectCreated:*
+  #           Filter:
+  #             S3Key:
+  #               Rules:
+  #                 - Name: suffix
+  #                   Value: _SUCCESS
+  #     Handler: batch_ingestion_trigger.lambda_handler
+  #     Policies:
+  #       - CloudWatchFullAccess
+  #       - Version: '2012-10-17'
+  #         Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - glue:*
+  #             Resource: '*'
 
-  InvokeASUInStrideDailyDAGFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: lambdas/daily-reports
-      Environment:
-        Variables:
-          AIRFLOW_URL: !Ref AirflowUrl
-      Events:
-        ASUInstrideDailyDataFileAdded:
-          Type: S3
-          Properties:
-            Bucket: !Ref DataLakeBucket
-            Events: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: daily-reports/asu
-                  - Name: suffix
-                    Value: .csv
-      Handler: DailyReportsHandler.invokeASUDailyDataProcessingDAG
-      Policies:
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-              Resource: !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}/*'
+  # DeltaLakeDeltasBucket:
+  #   Type: AWS::S3::Bucket
+  #   # DeletionPolicy: Retain
+  #   Properties:
+  #     BucketName: !Sub '${AWS::StackName}-delta-deltas'
 
-  InvokeAppFunnelDataDAGFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: lambdas/app-funnel-data
-      Environment:
-        Variables:
-          AIRFLOW_URL: !Ref AirflowUrl
-          UVA_AP_ID: !Ref UvaAcademicPartnerId
-          MEMPHIS_AP_ID: !Ref MemphisAcademicPartnerId
-          CUNY_AP_ID: !Ref CunyAcademicPartnerId
-          MADISON_AP_ID: !Ref MadisonAcademicPartnerId
-          ASU_ID: !Ref ASUAcademicPartnerId
-      Events:
-        AppFunnelDataFileAdded:
-          Type: S3
-          Properties:
-            Bucket: !Ref DataLakeBucket
-            Events: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: app_funnel_data/
-                  - Name: suffix
-                    Value: .csv
-        AggregatedAppFunnelDataFileAdded:
-          Type: S3
-          Properties:
-            Bucket: !Ref DataLakeBucket
-            Events: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: aggregated_app_funnel_data/
-                  - Name: suffix
-                    Value: .csv
-      Handler: AppFunnelDataHandler.invokeAppFunnelDataDAG
-      Policies:
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Action:
-                - s3:GetObject
-              Resource: !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}/*'
+  # DeltaLakeDeltasBucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref DeltaLakeDeltasBucket
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             AWS: !Sub 'arn:aws:iam::${InStrideServicesAccountID}:root'
+  #           Action:
+  #             - 's3:*'
+  #           Resource:
+  #             - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-deltas'
+  #             - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-deltas/*'
 
-  ASUInStrideDailyCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-asu-instride-daily'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Schedule:
-        ScheduleExpression: 'cron(0 0 * * ? *)'
-      TablePrefix: aggregated-daily-report-
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/aggregated-daily-report/asu'
-            Exclusions:
-              - '_SUCCESS'
+  # DeltaLakeIngestionBucket:
+  #   Type: AWS::S3::Bucket
+  #   # DeletionPolicy: Retain
+  #   Properties:
+  #     BucketName: !Sub '${AWS::StackName}-delta-ingestion'
 
-  AggregatedAppFunnelDataCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-aggregated-app-funnel-data'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/aggregated-app-funnel-data'
-            Exclusions:
-              - '_SUCCESS'
-              - '__HIVE_DEFAULT_PARTITION__'
+  # DeltaLakeIngestionBucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref DeltaLakeIngestionBucket
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             AWS: !Sub 'arn:aws:iam::${InStrideServicesAccountID}:root'
+  #           Action:
+  #             - 's3:*'
+  #           Resource:
+  #             - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-ingestion'
+  #             - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-ingestion/*'
 
-  AppFunnelDataCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-app-funnel-data'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/app-funnel-data'
-            Exclusions:
-              - '_SUCCESS'
-              - '__HIVE_DEFAULT_PARTITION__'
+  # DeltaGlueJobRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #               - glue.amazonaws.com
+  #           Action:
+  #             - sts:AssumeRole
+  #     Policies:
+  #       - PolicyName: root
+  #         PolicyDocument:
+  #           Version: 2012-10-17
+  #           Statement:
+  #             - Action:
+  #                 - s3:GetBucketLocation
+  #                 - s3:ListBucket
+  #                 - s3:ListAllMyBuckets
+  #                 - s3:GetBucketAcl
+  #                 - s3:GetObject
+  #                 - s3:PutObject
+  #                 - s3:DeleteObject
+  #                 - s3:PutBucketNotification
+  #                 - athena:*
+  #                 - glue:*
+  #               Effect: Allow
+  #               Resource:
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-ingestion'
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-ingestion/*'
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-deltas'
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-deltas/*'
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-etl-scripts'
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-etl-scripts/*'
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-raws'
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-delta-raws/*'
+  #             - Action:
+  #                 - cloudwatch:*
+  #               Effect: Allow
+  #               Resource:
+  #                 - '*'
+  #             - Action:
+  #                 - logs:CreateLogGroup
+  #                 - logs:CreateLogStream
+  #                 - logs:PutLogEvents
+  #               Effect: Allow
+  #               Resource:
+  #                 - 'arn:aws:logs:*:*:/aws-glue/*'
+  #                 - 'arn:aws:logs:*:*:/customlogs/*'
+  #     #ManagedPolicyArns:
+  #     #  - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
 
-  AcademicPartnersCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-academic-partners'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/academic-partners'
-            Exclusions:
-              - '_SUCCESS'
+  # DeltaLakeIngestionDatabase:
+  #   Type: AWS::Glue::Database
+  #   Properties:
+  #     DatabaseInput:
+  #       Name: !Sub '${IngestionDB}_delta_ingestion'
+  #     CatalogId: !Ref AWS::AccountId
 
-  CorporatePartnersCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-corporate-partners'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/corporate-partners'
-            Exclusions:
-              - '_SUCCESS'
+  # DeltaBatchETLJob:
+  #   Type: 'AWS::Glue::Job'
+  #   Properties:
+  #     Role: !GetAtt DeltaGlueJobRole.Arn
+  #     Name: !Sub '${AWS::StackName}_${BatchETLJobName}'
+  #     GlueVersion: '3.0'
+  #     Command:
+  #       'Name': 'glueetl'
+  #       'ScriptLocation': !Sub 's3://${AWS::StackName}-delta-etl-scripts/ingestion/batch_ingestion_etl.py'
+  #     DefaultArguments:
+  #       '--class': !Sub 'GlueApp'
+  #       '--job-bookmark-option': 'job-bookmark-enable'
+  #       '--enable-glue-datacatalog': ''
+  #       '--spark-event-logs-path': !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/tmp/spark-logs/'
+  #       '--conf': !Sub 'spark.delta.logStore.class=org.apache.spark.sql.delta.storage.S3SingleDriverLogStore --conf spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension --conf spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog --conf spark.sql.sources.partitionOverwriteMode=dynamic'
+  #       '--extra-jars': !Sub 's3://${AWS::StackName}-delta-etl-scripts/delta-core_2.12-1.0.0.jar'
+  #       '--extra-py-files': !Sub 's3://${AWS::StackName}-delta-etl-scripts/delta-core_2.12-1.0.0.jar'
+  #       '--enable-continuous-cloudwatch-log': 'true'
+  #       '--enable-continuous-log-filter': 'true'
+  #       '--deltas_bucket': !Sub '${AWS::StackName}-delta-deltas'
+  #       '--raws_bucket': !Sub '${AWS::StackName}-delta-raws'
+  #       '--ingestion_bucket': !Sub '${AWS::StackName}-delta-ingestion'
+  #     ExecutionProperty:
+  #       MaxConcurrentRuns: 20
+  #     MaxRetries: 3
+  #     Description: 'Batch Ingestion ETL Job for delta lake'
+  #     WorkerType: 'G.1X'
+  #     NumberOfWorkers: 20
 
-  EligibilityStatusCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-eligibility-status'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/eligibility-status'
-            Exclusions:
-              - '_SUCCESS'
+  # # -----END OF DELTA LAKE CONFIGURATIONS-----
 
-  EmployeesDailySyncCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-employees-daily-sync'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/employees_daily_sync'
-            Exclusions:
-              - '_SUCCESS'
+  # DataLakeBucket:
+  #   Type: AWS::S3::Bucket
+  #   # DeletionPolicy: Retain
+  #   Properties:
+  #     BucketName: !Sub '${AWS::StackName}-${DataLakeBucketNameSuffix}'
 
-  EmployeesCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-employees'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/employees'
-            Exclusions:
-              - '_SUCCESS'
+  # DataLakeBucketPolicy:
+  #   Type: AWS::S3::BucketPolicy
+  #   Properties:
+  #     Bucket: !Ref DataLakeBucket
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             AWS: !Sub 'arn:aws:iam::${InStrideServicesAccountID}:root'
+  #           Action:
+  #             - 's3:*'
+  #           Resource:
+  #             - !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}'
+  #             - !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}/*'
 
-  EmployeesInvoicesCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-employees-invoices'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/employees-invoices'
-            Exclusions:
-              - '_SUCCESS'
+  # GlueJobRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: '2012-10-17'
+  #       Statement:
+  #         - Effect: Allow
+  #           Principal:
+  #             Service:
+  #               - glue.amazonaws.com
+  #           Action:
+  #             - sts:AssumeRole
+  #     Policies:
+  #       - PolicyName: root
+  #         PolicyDocument:
+  #           Version: 2012-10-17
+  #           Statement:
+  #             - Action:
+  #                 - s3:GetBucketLocation
+  #                 - s3:ListBucket
+  #                 - s3:ListAllMyBuckets
+  #                 - s3:GetBucketAcl
+  #                 - s3:GetObject
+  #                 - s3:PutObject
+  #                 - s3:DeleteObject
+  #                 - s3:PutBucketNotification
+  #               Effect: Allow
+  #               Resource:
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}'
+  #                 - !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}/*'
+  #     ManagedPolicyArns:
+  #       - arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole
 
-  EnrollmentsCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-enrollments'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/enrollments'
-            Exclusions:
-              - '_SUCCESS'
+  # DataLakeDatabase:
+  #   Type: AWS::Glue::Database
+  #   Properties:
+  #     DatabaseInput:
+  #       Name: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     CatalogId: !Ref AWS::AccountId
 
-  LeadsCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-leads'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/leads'
-            Exclusions:
-              - '_SUCCESS'
+  # InvokeASUInStrideDailyDAGFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: lambdas/daily-reports
+  #     Environment:
+  #       Variables:
+  #         AIRFLOW_URL: !Ref AirflowUrl
+  #     Events:
+  #       ASUInstrideDailyDataFileAdded:
+  #         Type: S3
+  #         Properties:
+  #           Bucket: !Ref DataLakeBucket
+  #           Events: s3:ObjectCreated:*
+  #           Filter:
+  #             S3Key:
+  #               Rules:
+  #                 - Name: prefix
+  #                   Value: daily-reports/asu
+  #                 - Name: suffix
+  #                   Value: .csv
+  #     Handler: DailyReportsHandler.invokeASUDailyDataProcessingDAG
+  #     Policies:
+  #       - Version: '2012-10-17'
+  #         Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - s3:GetObject
+  #             Resource: !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}/*'
 
-  ProfilesCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-profiles'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/profiles'
-            Exclusions:
-              - '_SUCCESS'
+  # InvokeAppFunnelDataDAGFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     CodeUri: lambdas/app-funnel-data
+  #     Environment:
+  #       Variables:
+  #         AIRFLOW_URL: !Ref AirflowUrl
+  #         UVA_AP_ID: !Ref UvaAcademicPartnerId
+  #         MEMPHIS_AP_ID: !Ref MemphisAcademicPartnerId
+  #         CUNY_AP_ID: !Ref CunyAcademicPartnerId
+  #         MADISON_AP_ID: !Ref MadisonAcademicPartnerId
+  #         ASU_ID: !Ref ASUAcademicPartnerId
+  #     Events:
+  #       AppFunnelDataFileAdded:
+  #         Type: S3
+  #         Properties:
+  #           Bucket: !Ref DataLakeBucket
+  #           Events: s3:ObjectCreated:*
+  #           Filter:
+  #             S3Key:
+  #               Rules:
+  #                 - Name: prefix
+  #                   Value: app_funnel_data/
+  #                 - Name: suffix
+  #                   Value: .csv
+  #       AggregatedAppFunnelDataFileAdded:
+  #         Type: S3
+  #         Properties:
+  #           Bucket: !Ref DataLakeBucket
+  #           Events: s3:ObjectCreated:*
+  #           Filter:
+  #             S3Key:
+  #               Rules:
+  #                 - Name: prefix
+  #                   Value: aggregated_app_funnel_data/
+  #                 - Name: suffix
+  #                   Value: .csv
+  #     Handler: AppFunnelDataHandler.invokeAppFunnelDataDAG
+  #     Policies:
+  #       - Version: '2012-10-17'
+  #         Statement:
+  #           - Effect: Allow
+  #             Action:
+  #               - s3:GetObject
+  #             Resource: !Sub 'arn:aws:s3:::${AWS::StackName}-${DataLakeBucketNameSuffix}/*'
 
-  ReimbursementsCrawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
-      Name: !Sub '${AWS::StackName}-reimbursements'
-      DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
-      Role: !Ref GlueJobRole
-      Targets:
-        S3Targets:
-          - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/reimbursements'
-            Exclusions:
-              - '_SUCCESS'
+  # ASUInStrideDailyCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-asu-instride-daily'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Schedule:
+  #       ScheduleExpression: 'cron(0 0 * * ? *)'
+  #     TablePrefix: aggregated-daily-report-
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/aggregated-daily-report/asu'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # AggregatedAppFunnelDataCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-aggregated-app-funnel-data'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/aggregated-app-funnel-data'
+  #           Exclusions:
+  #             - '_SUCCESS'
+  #             - '__HIVE_DEFAULT_PARTITION__'
+
+  # AppFunnelDataCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-app-funnel-data'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/app-funnel-data'
+  #           Exclusions:
+  #             - '_SUCCESS'
+  #             - '__HIVE_DEFAULT_PARTITION__'
+
+  # AcademicPartnersCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-academic-partners'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/academic-partners'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # CorporatePartnersCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-corporate-partners'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/corporate-partners'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # EligibilityStatusCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-eligibility-status'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/eligibility-status'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # EmployeesDailySyncCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-employees-daily-sync'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/employees_daily_sync'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # EmployeesCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-employees'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/employees'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # EmployeesInvoicesCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-employees-invoices'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/employees-invoices'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # EnrollmentsCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-enrollments'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/enrollments'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # LeadsCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-leads'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/leads'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # ProfilesCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-profiles'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/profiles'
+  #           Exclusions:
+  #             - '_SUCCESS'
+
+  # ReimbursementsCrawler:
+  #   Type: AWS::Glue::Crawler
+  #   Properties:
+  #     Configuration: '{"Version": 1.0, "Grouping": { "TableGroupingPolicy": "CombineCompatibleSchemas" }}'
+  #     Name: !Sub '${AWS::StackName}-reimbursements'
+  #     DatabaseName: !Sub '${AWS::StackName}-${DataLakeDatabaseNameSuffix}'
+  #     Role: !Ref GlueJobRole
+  #     Targets:
+  #       S3Targets:
+  #         - Path: !Sub 's3://${AWS::StackName}-${DataLakeBucketNameSuffix}/${ETLOutputPrefix}/reimbursements'
+  #           Exclusions:
+  #             - '_SUCCESS'
