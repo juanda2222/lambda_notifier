@@ -3,7 +3,8 @@ import { S3Handler } from 'aws-lambda';
 import { ConfigFile } from '../../configFile.class';
 import  { S3, CloudWatchLogs } from 'aws-sdk';
 import { CONFIG } from '../../config';
-import { validateSync } from 'class-validator';
+import { validateOrReject } from 'class-validator';
+import { SubscriptionFilters } from 'aws-sdk/clients/cloudwatchlogs';
 
 const FILTER_NAME_PREFIX = "auto-notification--"
 const formatFilterNameFromConfigRuleName = (configRuleName: string) => {
@@ -39,18 +40,27 @@ const lambdaUpdater: S3Handler = async (event) => {
         const fetchParams = {
             logGroupName: validatedLogGroupName,
         }
-        const { subscriptionFilters } = await cwl.describeSubscriptionFilters(fetchParams).promise()
+        let subscriptionFilters: SubscriptionFilters 
+        try {
+            subscriptionFilters = (await cwl.describeSubscriptionFilters(fetchParams).promise()).subscriptionFilters
+        } catch (error) {
+            throw new Error(`Could not read filters for log group '${validatedLogGroupName}'. Error: ${error}`)
+        }
 
         // discard the filters that not follow the patters
         const automaticNotificationFilters = subscriptionFilters.filter(filter => isANotificationFilter(filter.filterName)) 
 
         // delete result filters
-        const filtersDeleted = await Promise.all(automaticNotificationFilters.map( async ({filterName, logGroupName}) => {
-            await cwl.deleteSubscriptionFilter({ filterName, logGroupName }).promise()
-            return filterName
-        }))
-        console.log(`${filtersDeleted.length} triggers DELETED. Result: ${filtersDeleted}`)
-        return
+        try {
+            const filtersDeleted = await Promise.all(automaticNotificationFilters.map( async ({filterName, logGroupName}) => {
+                await cwl.deleteSubscriptionFilter({ filterName, logGroupName }).promise()
+                return filterName
+            }))
+            console.log(`${filtersDeleted.length} triggers DELETED. Result: ${filtersDeleted}`)
+            return
+        } catch (error) {
+            throw new Error(`Could not delete filters '${automaticNotificationFilters.map(filterDescription => filterDescription.filterName)}'. Error: ${error}`)
+        }
     }
 
     // Get the object from the event and show its content type
@@ -65,28 +75,32 @@ const lambdaUpdater: S3Handler = async (event) => {
 
 
     // validate the structure of the file
-    validateSync(configContent)
+    validateOrReject(configContent)
 
     // ----------- ADD TRIGGERS ROUTINE -----------------
     // process all filters inside the file
     console.log("CREATING TRIGGERS")
-    const filtersCreated = await Promise.all(configContent.rules.map(async rule => {
+    try {
+        const filtersCreated = await Promise.all(configContent.rules.map(async rule => {
 
-        // Create the CloudWatchLogs service object
-        const { filterPattern, ruleName } = rule
-        let params = {
-            destinationArn: CONFIG.NOTIFICATION_LAMBDA_ARN,
-            filterName: formatFilterNameFromConfigRuleName(ruleName),
-            filterPattern,
-            logGroupName: validatedLogGroupName,
-        }
-
-        await cwl.putSubscriptionFilter(params).promise();
-        return ruleName
-    }))
+            // Create the CloudWatchLogs service object
+            const { filterPattern, ruleName } = rule
+            let params = {
+                destinationArn: CONFIG.NOTIFICATION_LAMBDA_ARN,
+                filterName: formatFilterNameFromConfigRuleName(ruleName),
+                filterPattern,
+                logGroupName: validatedLogGroupName,
+            }
     
-    console.log(`${filtersCreated.length} triggers CREATED. Result: ${filtersCreated}`)
-    return;
+            await cwl.putSubscriptionFilter(params).promise();
+            return ruleName
+        }))
+        console.log(`${filtersCreated.length} triggers CREATED. Result: ${filtersCreated}`)
+        return;
+    
+    } catch (error) {
+        throw new Error(`Could not create filters based on file '${fileKey}'. Error: ${error}`)
+    }
 };
 
 exports.handler = lambdaUpdater

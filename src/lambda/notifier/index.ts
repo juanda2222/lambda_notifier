@@ -5,6 +5,7 @@ import { S3 } from "aws-sdk";
 import { CONFIG } from '../../config';
 import { NotificationService } from '../../notificationService';
 import { ConfigFile } from '../../configFile.class';
+import { validateOrReject } from 'class-validator';
 
 const getConfigPathFromTeamName = (teamName: string) => {
     return `${teamName}`
@@ -27,6 +28,8 @@ const lambdaNotifier: CloudWatchLogsHandler = async (event) => {
         throw new Error(`Could not read configFile. Wrong bucketName or teamName. Error: ${error}`)
     }
     const configContent: ConfigFile = JSON.parse(configResponse.Body.toString('utf-8'));
+    // validate the structure of the file
+    validateOrReject(configContent)
 
     // send message using the notification wrapper
     let notificationService = new NotificationService({awsRegion: CONFIG.AWS_REGION});
