@@ -7,8 +7,10 @@
         "preserveConstEnums": true,
         "sourceMap": true,
         "esModuleInterop": true,
-        "experimentalDecorators": true
+        "experimentalDecorators": true,
+        "outDir": "build"
+
     },
-    "include": ["src/**/*", "index.ts"],
+    "include": [".", "index.ts"],
     "exclude": ["node_modules", "**/*.spec.ts"]
 }

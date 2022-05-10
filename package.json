@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "deploy": "./bin/deploy.sh --stack test"
+    "deploy": "./bin/deploy.sh --stack test",
+    "compile-notifier": "cd src/lambdas/notifier && tsc"
   },
   "author": "",
   "license": "ISC",
