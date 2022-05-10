@@ -36,7 +36,6 @@ Resources:
           LAMBDA_NAME: !Sub '${AWS::StackName}-notification-from-log'
       Handler: index.LambdaHandler
       Policies:
-        - S3ReadFullAccess
         - Version: '2012-10-17'
           Statement:
             - Effect: Allow

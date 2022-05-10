@@ -53,15 +53,15 @@ get_profile() {
 }
 
 
-if ! aws s3api wait bucket-exists --bucket $stack --region $region $(get_profile); then
-  echo "creating s3 bucket for deploy"
-  aws s3 mb s3://$stack --region $region $(get_profile)
-fi
+# if ! aws s3api wait bucket-exists --bucket $stack --region $region $(get_profile); then
+#   echo "creating s3 bucket for deploy"
+#   aws s3 mb s3://$stack --region $region $(get_profile)
+# fi
 
 echo "Packaging stack on ${stack}"
 aws cloudformation package --region $region $(get_profile) --template-file ./aws_resources.yml --s3-bucket $stack --output-template-file out.yml
 
 echo "Deploying stack ${stack}"
-aws cloudformation deploy --region $region $(get_profile) --template-file out.yml --capabilities "CAPABILITY_IAM" --stack-name $stack
+aws cloudformation deploy --region $region $(get_profile) --template-file out.yml --stack-name $stack
 
 echo "Deploy Completed"
