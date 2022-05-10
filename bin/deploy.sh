@@ -53,9 +53,9 @@ get_profile() {
 }
 
 # create a bucket to upload the build files for the CloudFormation job
-if ! aws s3api wait bucket-exists --bucket $stack --region $region $(get_profile); then
+if ! aws s3 ls | awk '{print $NF}' | grep -w cf--notification-system--$stack; then
   echo "creating s3 bucket for deploy"
-  aws s3 mb s3://$stack --region $region $(get_profile)
+  aws s3 mb s3://cf--notification-system--$stack --region $region $(get_profile)
 fi
 
 echo "Packaging stack on ${stack}"
