@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "deploy": "./bin/deploy.sh --stack test",
-    "compile-notifier": "cd src/lambdas/notifier && tsc"
+    "deploy": "npm run build && ./bin/deploy.sh --stack testing",
+    "compile-notifier": "cd src/lambdas/notifier && tsc",
+    "build": "tsc && cp package*.json build && cd build && npm ci --production",
+    "publish": "./bin/deploy.sh --stack testing"
   },
   "author": "",
   "license": "ISC",
@@ -24,6 +26,7 @@
     "@types/aws-sdk": "^2.7.0",
     "@types/jest": "^27.5.0",
     "@types/node": "^17.0.31",
+    "@types/validator": "^13.7.2",
     "babel-jest": "^28.0.3",
     "jest": "^28.0.3",
     "ts-node": "^10.7.0",

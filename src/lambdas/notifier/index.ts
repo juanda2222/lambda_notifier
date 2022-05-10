@@ -11,7 +11,7 @@ const getConfigPathFromTeamName = (teamName: string) => {
     return `${teamName}`
 }
 
-const lambdaNotifier: CloudWatchLogsHandler = async (event) => {
+const LambdaNotifier: CloudWatchLogsHandler = async (event) => {
     
     // parse the receiving message
     console.log("SENDING NOTIFICATION")
@@ -40,5 +40,4 @@ const lambdaNotifier: CloudWatchLogsHandler = async (event) => {
     return;
 };
 
-exports.handler = lambdaNotifier
-export default lambdaNotifier
+export default LambdaNotifier
