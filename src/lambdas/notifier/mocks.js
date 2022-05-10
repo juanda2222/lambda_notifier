@@ -1,13 +1,13 @@
 import { CloudWatchLogsEvent } from "aws-lambda"
-import { ConfigFile } from "../../configFile.class"
+import { ConfigFile } from "../../../configFile.class"
 
-export const mockCLoudWatchEvent: CloudWatchLogsEvent = {
+export const mockCLoudWatchEvent = {
     awslogs: {
         data: "H4sIAAAAAAAAADWQvY7CMBCEXyVyTWHHfzFdpMtRUYXuhCxzWYKl2I5iA0KId79NpCv3m9Hszr5JgJzdCKfXDGRPvtpTa49d37eHjuxIekZYEDPOpaFK0kZwxFMaD0u6z6gUyMXibMcNbFpfFnABxZXnbbBPX242JusHcOjK90v+XfxcfIrffiqwZLL/IeFlJxcug7PXDZLzFtg9IJbV8CZ+wFyuGl5TY5RiTNa1oIprqoUxXNaacaVrhoIwmqmGUdGgjTdGCFxcPBYuLuDtTEmmsJGmTOvd/yMwPqZqPbNysSo3iFVOASofr4l8zp8/Yz9SYjIBAAA="
     }
 }
 
-export const mockConfigFile: ConfigFile = {
+export const mockConfigFile = {
     rules: [
         {
             filterPattern: "CP ERROR ERROR: ",

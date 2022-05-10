@@ -2,13 +2,13 @@ import { SNS } from "aws-sdk";
 import { MessageInfoType, NotificationClientConfig, NotificationServiceClass } from ".";
 import { getSubjectFromCloudWatchLog, getTopicArnFromConfigFile } from "./helpers";
 
-export class SNSService implements NotificationServiceClass{
-    sns: SNS
-    constructor(notificationConfig?: NotificationClientConfig) {
+export class SNSService {
+    sns
+    constructor(notificationConfig) {
         const { awsRegion } = notificationConfig ?? {}
         this.sns = new SNS({region: awsRegion});
     }
-    async sendMessage({ decodedLog, configFile }: MessageInfoType){
+    async sendMessage({ decodedLog, configFile }){
         const { logEvents } = decodedLog
         let params = {
             Message: JSON.stringify(logEvents), 

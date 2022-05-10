@@ -25,26 +25,32 @@ Resources:
     Type: AWS::S3::Bucket
     # DeletionPolicy: Retain
     Properties:
-      BucketName: !Sub '${AWS::StackName}_notification-config'
+      BucketName: !Sub '${AWS::StackName}-notification-config'
 
-# NotificationFromLogFunction:
-#     Type: AWS::Serverless::Function
-#     Properties:
-#       CodeUri: src/lambdas/notifier/index.ts
-#       Runtime: Node.js12.x
-#       Environment:
-#         Variables:
-#           BATCH_ETL_PROCESS: !Sub '${AWS::StackName}_notification-from-log'
-#       Handler: batch_ingestion_trigger.lambda_handler
-#       Policies:
-#         - CloudWatchFullAccess
-#         - Version: '2012-10-17'
-#           Statement:
-#             - Effect: Allow
-#               Action:
-#                 - glue:*
-#               Resource: '*'
+  NotificationFromLogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/lambdas/notifier
+      Environment:
+        Variables:
+          LAMBDA_NAME: !Sub '${AWS::StackName}-notification-from-log'
+      Handler: index.LambdaHandler
+      Policies:
+        - S3ReadFullAccess
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:*
+              Resource: '*'
 
+        # - S3ReadingAccess
+        # - Version: '2012-10-17'
+        #   Statement:
+        #     - Effect: Allow
+        #       Action:
+        #         - s3:*
+        #       Resource: !Sub arn:aws:s3:::${AWS::StackName}-notification-config
 
 
 

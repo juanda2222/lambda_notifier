@@ -7,21 +7,21 @@ import { validateOrReject } from 'class-validator';
 import { SubscriptionFilters } from 'aws-sdk/clients/cloudwatchlogs';
 
 const FILTER_NAME_PREFIX = "auto-notification--"
-const formatFilterNameFromConfigRuleName = (configRuleName: string) => {
+const formatFilterNameFromConfigRuleName = (configRuleName) => {
     return `${FILTER_NAME_PREFIX}${configRuleName}`
 }
 
-const isANotificationFilter = (filterName: string) => {
+const isANotificationFilter = (filterName) => {
     return (new RegExp(`^${FILTER_NAME_PREFIX}`)).test(filterName)
 }
 
-const validateFileKeyAsLogGroup = (fileKey: string) => {
+const validateFileKeyAsLogGroup = (fileKey) => {
     // TODO: do some format validations because the rules for a groupLogName are different from the rules of an s3 file
     return fileKey
 }
 
 
-const lambdaUpdater: S3Handler = async (event) => {
+const lambdaUpdater = async (event) => {
 
     // get the important information from the event
     const fileKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
@@ -40,7 +40,7 @@ const lambdaUpdater: S3Handler = async (event) => {
         const fetchParams = {
             logGroupName: validatedLogGroupName,
         }
-        let subscriptionFilters: SubscriptionFilters 
+        let subscriptionFilters 
         try {
             subscriptionFilters = (await cwl.describeSubscriptionFilters(fetchParams).promise()).subscriptionFilters
         } catch (error) {
@@ -69,7 +69,7 @@ const lambdaUpdater: S3Handler = async (event) => {
         Bucket: bucket,
         Key: fileKey,
     }; 
-    let configContent: ConfigFile;
+    let configContent;
     const configResponse = await s3.getObject(fileRequestParams).promise();
     configContent = JSON.parse(configResponse.Body.toString('utf-8'))
 

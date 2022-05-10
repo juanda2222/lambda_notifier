@@ -2,30 +2,22 @@ import { CloudWatchLogsDecodedData } from "aws-lambda";
 import { ConfigFile } from "../configFile.class";
 import { SlackService } from "./slackService";
 import { SNSService } from "./snsService";
-export interface MessageInfoType {
-    decodedLog: CloudWatchLogsDecodedData, 
-    configFile: ConfigFile
-}
-export abstract class NotificationServiceClass {
-    abstract sendMessage(messageInfo: MessageInfoType): Promise<void>
+
+export class NotificationServiceClass {
+    sendMessage(messageInfo)
 }
 
-export interface NotificationClientConfig {
-    type?: 'sns' | 'slack',
-    awsRegion: string
-
-}
-export class NotificationService implements NotificationServiceClass{
+export class NotificationService {
 
     // store of the notification class
-    client: NotificationServiceClass
+    client
     
-    constructor(notificationConfig?: NotificationClientConfig) {
+    constructor(notificationConfig) {
         this.client = this.instanceNotificationClassFromType(notificationConfig)
     }
 
     // mapping to handle automatic switching depending on an initialization type
-    instanceNotificationClassFromType(notificationConfig?: NotificationClientConfig){
+    instanceNotificationClassFromType(notificationConfig){
 
         const notificationClass = {
             slack: SlackService,
@@ -35,7 +27,7 @@ export class NotificationService implements NotificationServiceClass{
         const classType = notificationConfig?.type ?? 'sns'
         return new notificationClass[classType](notificationConfig)
     }
-    async sendMessage(messageInfo: MessageInfoType){
+    async sendMessage(messageInfo){
         await this.client.sendMessage(messageInfo)
     }
 }

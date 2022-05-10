@@ -1,5 +1,5 @@
-import LambdaNotifier from '.'
 import { Context } from 'aws-lambda/handler'
+import LambdaHandler from '.';
 import { mockCLoudWatchEvent, mockS3ConfigFileResponse, mockSNSResponse } from './mocks';
 
 
@@ -22,7 +22,7 @@ describe('LambdaNotifier', () => {
     test('Correct configuration is fetch from s3 and sns message is published', async () => {
         
         // beware, context use is not type safe
-        await LambdaNotifier(mockCLoudWatchEvent, {} as Context, (error, result) => {
+        await LambdaHandler(mockCLoudWatchEvent, {}, (error, result) => {
             if (error) console.error(error)
             console.log(result)
         })

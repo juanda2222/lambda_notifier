@@ -1,4 +1,4 @@
-import { EnvVariables } from "./environmentVariables.enum";
+import { EnvVariables } from "./environmentVariables";
 
 require('dotenv').config();
 
