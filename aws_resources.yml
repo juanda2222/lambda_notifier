@@ -38,6 +38,26 @@ Resources:
   #     CompatibleRuntimes:
   #       - nodejs12.x    
 
+  # # LogGroupInvokeLambdaPermission:
+  # #   Type: AWS::Lambda::Permission
+  # #   Properties:
+  # #     FunctionName: !Sub '${AWS::StackName}--notification-from-log'
+  # #     Action: lambda:InvokeFunction
+  # #     Principal: logs.amazonaws.com
+  # #     # SourceAccount: !Ref 'AWS::AccountId'
+  # #     SourceArn: "arn:aws:logs::::*"
+  # #     # SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
+
+  # NewLogGroupInvokeLambdaPermission:
+  #   Type: AWS::Lambda::Permission
+  #   Properties:
+  #     FunctionName: !Sub '${AWS::StackName}--update-triggers'
+  #     Action: lambda:InvokeFunction
+  #     Principal: logs.amazonaws.com
+  #     # SourceAccount: !Ref 'AWS::AccountId'
+  #     SourceArn: "arn:aws:logs:*:*:*"
+  #     # SourceArn: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:*'
+
   NotificationFromLogFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -63,19 +83,35 @@ Resources:
       Policies:
         - Version: '2012-10-17'
           Statement:
-            - Effect: Allow
+            - Sid: ReadS3ConfigFiles
+              Effect: Allow
               Action:
                 - s3:*
               Resource: '*'
-        - Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
+            - Sid: MakeLogsFilters
+              Effect: Allow
               Action:
                 - logs:*
               Resource: '*'
+      Environment:
+        Variables:
+          LAMBDA_NOTIFIER_NAME: !Sub '${AWS::StackName}--notification-from-log'
+              
+            # - Sid: ExecuteNotificationFunction
+            #   Effect: Allow
+            #   Action:
+            #     - lambda:*
+            #   Resource: '*'
+
+        #  "Effect": "Allow",
+        #  "Action": [
+        #     "lambda:InvokeFunction"
+        #  ],
+        #  "Resource":"*"
+
+           
       Events:
         S3ConfigChangeTrigger:
-          
           Type: S3
           Properties:
             Bucket: !Ref NotificationsConfigBucket

@@ -16,7 +16,6 @@ const isANotificationFilter = (filterName: string) => {
 
 const validateFileKeyAsLogGroup = (fileKey: string) => {
     // TODO: do some format validations because the rules for a groupLogName are different from the rules of an s3 file
-    console.log(fileKey)
     
     // check if the file is json
     if (!((new RegExp(".json$", "i")).test(fileKey))){
@@ -33,7 +32,7 @@ const validateFileKeyAsLogGroup = (fileKey: string) => {
 const LambdaUpdater: S3Handler = async (event) => {
 
     // get the important information from the event
-    console.log('>> EVENT: ', event)
+    console.log(`PROCESSING '${event.Records[0].eventName}' EVENT `)
     const fileKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
     const validatedLogGroupName = validateFileKeyAsLogGroup(fileKey)
 
@@ -64,9 +63,10 @@ const LambdaUpdater: S3Handler = async (event) => {
         try {
             const filtersDeleted = await Promise.all(automaticNotificationFilters.map( async ({filterName, logGroupName}) => {
                 await cwl.deleteSubscriptionFilter({ filterName, logGroupName }).promise()
+                console.log(`Filter '${filterName}' DELETED`)
                 return filterName
             }))
-            console.log(`${filtersDeleted.length} triggers DELETED. Result: ${filtersDeleted}`)
+            console.log(`${filtersDeleted.length} triggers deleted. SUMMARY: ${filtersDeleted}`)
             return
         } catch (error) {
             throw new Error(`Could not delete filters '${automaticNotificationFilters.map(filterDescription => filterDescription.filterName)}'. Error: ${error}`)
@@ -99,17 +99,18 @@ const LambdaUpdater: S3Handler = async (event) => {
 
             // Create the CloudWatchLogs service object
             const { filterPattern, ruleName } = rule
+            const filterName = formatFilterNameFromConfigRuleName(ruleName)
             let params = {
                 destinationArn: CONFIG.NOTIFICATION_LAMBDA_ARN,
-                filterName: formatFilterNameFromConfigRuleName(ruleName),
+                filterName,
                 filterPattern,
                 logGroupName: validatedLogGroupName,
             }
-            console.log('--------- >>>>>>>>>>>>> Subscription')
             await cwl.putSubscriptionFilter(params).promise();
+            console.log(`Filter '${filterName}' CREATED`)
             return ruleName
         }))
-        console.log(`${filtersCreated.length} triggers CREATED. Result: ${filtersCreated}`)
+        console.log(`${filtersCreated.length} triggers created. SUMMARY: ${filtersCreated}`)
         return;
     
     } catch (error) {
@@ -117,5 +118,4 @@ const LambdaUpdater: S3Handler = async (event) => {
     }
 };
 
-exports.handler = LambdaUpdater
 export default LambdaUpdater

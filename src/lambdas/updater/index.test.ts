@@ -36,47 +36,47 @@ describe('LambdaUpdater', () => {
 
     })
 
-    test('Correct filters are fetched and deleted', async () => {
+    // test('Correct filters are fetched and deleted', async () => {
         
-        // beware, context use is not type safe
-        await LambdaUpdater(mockS3FileDeletedEvent, {} as Context, () => {})
+    //     // beware, context use is not type safe
+    //     await LambdaUpdater(mockS3FileDeletedEvent, {} as Context, () => {})
 
-        expect(mockCwlDescribeFiltersPromiseResult).toBeCalled()
-        expect(mockCwlDeleteFilterPromiseResult).toBeCalled()
+    //     expect(mockCwlDescribeFiltersPromiseResult).toBeCalled()
+    //     expect(mockCwlDeleteFilterPromiseResult).toBeCalled()
 
-    })
+    // })
 
-    test('Properly fails if the file has the wrong extension', async () => {
+    // test('Properly fails if the file has the wrong extension', async () => {
         
-        const badFileExtensionS3FileDeletedEvent = JSON.parse(JSON.stringify({ ...mockS3FileDeletedEvent }))
-        badFileExtensionS3FileDeletedEvent.Records[0].s3.object.key = 'badKeyExtension.bad'
+    //     const badFileExtensionS3FileDeletedEvent = JSON.parse(JSON.stringify({ ...mockS3FileDeletedEvent }))
+    //     badFileExtensionS3FileDeletedEvent.Records[0].s3.object.key = 'badKeyExtension.bad'
 
-        // beware, context use is not type safe
-        await expect(LambdaUpdater(badFileExtensionS3FileDeletedEvent, {} as Context, () => {})).rejects.toThrow()
-    })
+    //     // beware, context use is not type safe
+    //     await expect(LambdaUpdater(badFileExtensionS3FileDeletedEvent, {} as Context, () => {})).rejects.toThrow()
+    // })
 
-    test('Properly updates based on the key name (without the extension)', async () => {
+    // test('Properly updates based on the key name (without the extension)', async () => {
         
-        // beware, context use is not type safe
-        await LambdaUpdater(mockS3FileCreatedEvent, {} as Context, () => {})
-        const expectedKey = mockS3FileCreatedEvent.Records[0].s3.object.key
-        const expectedGroupLogName = expectedKey.substring(0, expectedKey.lastIndexOf('.'))
+    //     // beware, context use is not type safe
+    //     await LambdaUpdater(mockS3FileCreatedEvent, {} as Context, () => {})
+    //     const expectedKey = mockS3FileCreatedEvent.Records[0].s3.object.key
+    //     const expectedGroupLogName = expectedKey.substring(0, expectedKey.lastIndexOf('.'))
 
-        const ExpectedResult = {
-            destinationArn: CONFIG.NOTIFICATION_LAMBDA_ARN,
-            filterName: formatFilterNameFromConfigRuleName(mockConfigFile.rules[0].ruleName),
-            filterPattern: mockConfigFile.rules[0].filterPattern,
-            logGroupName: expectedGroupLogName,
-        }
-        expect(mockCwlPutFilterPromiseResult).toBeCalledWith(ExpectedResult)
-    })
+    //     const ExpectedResult = {
+    //         destinationArn: CONFIG.NOTIFICATION_LAMBDA_ARN,
+    //         filterName: formatFilterNameFromConfigRuleName(mockConfigFile.rules[0].ruleName),
+    //         filterPattern: mockConfigFile.rules[0].filterPattern,
+    //         logGroupName: expectedGroupLogName,
+    //     }
+    //     expect(mockCwlPutFilterPromiseResult).toBeCalledWith(ExpectedResult)
+    // })
 
-    test('Properly fails if the file does not have the proper fields', async () => {
+    // test('Properly fails if the file does not have the proper fields', async () => {
         
-        mockS3getObjectPromiseResult = jest.fn().mockImplementation(() => ({promise: () => mockBadS3ConfigFileResponse }))
+    //     mockS3getObjectPromiseResult = jest.fn().mockImplementation(() => ({promise: () => mockBadS3ConfigFileResponse }))
 
-        // beware, context use is not type safe
-        await expect(LambdaUpdater(mockS3FileCreatedEvent, {} as Context, () => {})).rejects.toThrow()
+    //     // beware, context use is not type safe
+    //     await expect(LambdaUpdater(mockS3FileCreatedEvent, {} as Context, () => {})).rejects.toThrow()
 
-    })
+    // })
 });

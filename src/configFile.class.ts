@@ -26,7 +26,7 @@ const NotificationDataSchema = [
     }),
     // ssn
     Joi.object({
-        snsArn: Joi.string().required()
+        snsArn: Joi.string()
     })
 ]
 export const ConfigFileSchema = Joi.object({
@@ -34,6 +34,6 @@ export const ConfigFileSchema = Joi.object({
         ruleName: Joi.string().required(),
         filterPattern: Joi.string().required(),
         notificationType: Joi.string().valid('sns','slack').required(),
-        notificationData: Joi.string().valid(...NotificationDataSchema).required()
+        notificationData: Joi.alternatives(...NotificationDataSchema).required()
     }).required())
 })

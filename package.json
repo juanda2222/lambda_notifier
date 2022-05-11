@@ -15,7 +15,6 @@
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "^3.82.0",
     "aws-sdk": "^2.1127.0",
-    "class-validator": "^0.13.2",
     "dotenv": "^16.0.0",
     "joi": "^17.6.0"
   },

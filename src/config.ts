@@ -7,7 +7,6 @@ const AWS_ACCOUNT_ID = process.env[EnvVariables.AWS_ACCOUNT_ID] ?? '133590650843
 const LAMBDA_NOTIFIER_NAME = process.env[EnvVariables.LAMBDA_NOTIFIER_NAME] ?? 'notification-from-log'
 
 export const CONFIG = {
-    KMS_KEY_ID_TS: process.env[EnvVariables.KMS_KEY_ID_TS],
     NOTIFICATION_CONFIG_BUCKET_NAME: process.env[EnvVariables.NOTIFICATION_CONFIG_BUCKET_NAME] ?? 'notification-config',
     AWS_REGION,
     AWS_ACCOUNT_ID,
