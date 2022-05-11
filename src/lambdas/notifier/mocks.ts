@@ -20,7 +20,20 @@ export const mockConfigFile: ConfigFile = {
 
     ]
 }
+
+export const mockBadConfigFile = {
+    bad: [
+        {
+            badBad: "CP ERROR ERROR: ",
+            MoreBad: "error",
+        }
+
+    ]
+}
+
 export const mockS3ConfigFileResponse = { Body: {toString: () => JSON.stringify(mockConfigFile)}}
+export const mockBadS3ConfigFileResponse = { Body: {toString: () => JSON.stringify(mockBadConfigFile)}}
+
 export const mockSNSResponse = {
     ResponseMetadata: { RequestId: 'a848e404-66f1-544b-8017-beea6a1a5524' },
     MessageId: 'eb4bf0ff-c0b9-53d6-96a2-aa11822232b9'

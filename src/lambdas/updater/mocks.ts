@@ -27,7 +27,7 @@ export const mockS3FileCreatedEvent = {
                     "arn": "arn:aws:s3:::example-bucket"
                 },
                 "object": {
-                    "key": "HappyFace.jpg",
+                    "key": "HappyFace.json",
                     "size": 1024,
                     "eTag": "0123456789abcdef0123456789abcdef",
                     "sequencer": "0A1B2C3D4E5F678901"
@@ -66,7 +66,7 @@ export const mockS3FileDeletedEvent = {
                   "arn": "arn:aws:s3:::example-bucket"
               },
               "object": {
-                  "key": "HappyFace.jpg",
+                  "key": "HappyFace.json",
                   "size": 1024,
                   "eTag": "0123456789abcdef0123456789abcdef",
                   "sequencer": "0A1B2C3D4E5F678901"

@@ -1,13 +1,12 @@
 
 import { S3Handler } from 'aws-lambda';
-import { ConfigFile } from '../../configFile.class';
+import { ConfigFile, ConfigFileSchema } from '../../configFile.class';
 import  { S3, CloudWatchLogs } from 'aws-sdk';
 import { CONFIG } from '../../config';
-import { validateOrReject } from 'class-validator';
 import { SubscriptionFilters } from 'aws-sdk/clients/cloudwatchlogs';
 
 const FILTER_NAME_PREFIX = "auto-notification--"
-const formatFilterNameFromConfigRuleName = (configRuleName: string) => {
+export const formatFilterNameFromConfigRuleName = (configRuleName: string) => {
     return `${FILTER_NAME_PREFIX}${configRuleName}`
 }
 
@@ -17,13 +16,24 @@ const isANotificationFilter = (filterName: string) => {
 
 const validateFileKeyAsLogGroup = (fileKey: string) => {
     // TODO: do some format validations because the rules for a groupLogName are different from the rules of an s3 file
-    return fileKey
+    console.log(fileKey)
+    
+    // check if the file is json
+    if (!((new RegExp(".json$", "i")).test(fileKey))){
+        throw new Error("File is not json. Check the extension")
+    }
+
+    // remove the json file
+    let logGroup = fileKey.substring(0, fileKey.lastIndexOf('.'))
+
+    return logGroup
 }
 
 
-const lambdaUpdater: S3Handler = async (event) => {
+const LambdaUpdater: S3Handler = async (event) => {
 
     // get the important information from the event
+    console.log('>> EVENT: ', event)
     const fileKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
     const validatedLogGroupName = validateFileKeyAsLogGroup(fileKey)
 
@@ -69,13 +79,17 @@ const lambdaUpdater: S3Handler = async (event) => {
         Bucket: bucket,
         Key: fileKey,
     }; 
-    let configContent: ConfigFile;
-    const configResponse = await s3.getObject(fileRequestParams).promise();
-    configContent = JSON.parse(configResponse.Body.toString('utf-8'))
-
-
+    let configResponse
+    try {
+        configResponse = await s3.getObject(fileRequestParams).promise()
+    } catch (error) {
+        throw new Error(`Could not read configFile. Wrong bucketName or teamName. Error: ${error}`)
+    }
+        
+    
     // validate the structure of the file
-    validateOrReject(configContent)
+    const configContent: ConfigFile = JSON.parse(configResponse.Body.toString('utf-8'))
+    await ConfigFileSchema.validateAsync(configContent)
 
     // ----------- ADD TRIGGERS ROUTINE -----------------
     // process all filters inside the file
@@ -91,7 +105,7 @@ const lambdaUpdater: S3Handler = async (event) => {
                 filterPattern,
                 logGroupName: validatedLogGroupName,
             }
-    
+            console.log('--------- >>>>>>>>>>>>> Subscription')
             await cwl.putSubscriptionFilter(params).promise();
             return ruleName
         }))
@@ -103,5 +117,5 @@ const lambdaUpdater: S3Handler = async (event) => {
     }
 };
 
-exports.handler = lambdaUpdater
-export default lambdaUpdater
+exports.handler = LambdaUpdater
+export default LambdaUpdater

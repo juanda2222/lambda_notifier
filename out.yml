@@ -14,7 +14,7 @@ Resources:
   NotificationFromLogFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://cf--notification-system--testing/eb5e0da7cebd4ca817e2a2b27a34abdf
+      CodeUri: s3://cf--notification-system--testing/df0d67a8fb4949fb33919f8757fe1725
       FunctionName:
         Fn::Sub: ${AWS::StackName}--notification-from-log
       Handler: index.LambdaNotifierHandler
@@ -25,3 +25,32 @@ Resources:
           Action:
           - s3:*
           Resource: '*'
+  UpdateTriggersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://cf--notification-system--testing/df0d67a8fb4949fb33919f8757fe1725
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}--update-triggers
+      Handler: index.LambdaUpdatedHandler
+      Policies:
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - s3:*
+          Resource: '*'
+      - Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - logs:*
+          Resource: '*'
+      Events:
+        S3ConfigChangeTrigger:
+          Type: S3
+          Properties:
+            Bucket:
+              Ref: NotificationsConfigBucket
+            Events:
+            - s3:ObjectCreated:*
+            - s3:ObjectRemoved:*

@@ -4,8 +4,7 @@ import * as zlib from 'zlib';
 import { S3 } from "aws-sdk";
 import { CONFIG } from '../../config';
 import { NotificationService } from '../../notificationService';
-import { ConfigFile } from '../../configFile.class';
-import { validateOrReject } from 'class-validator';
+import { ConfigFile, ConfigFileSchema } from '../../configFile.class';
 
 const getConfigPathFromTeamName = (teamName: string) => {
     return `${teamName}`
@@ -30,7 +29,7 @@ const LambdaNotifier: CloudWatchLogsHandler = async (event) => {
     }
     const configContent: ConfigFile = JSON.parse(configResponse.Body.toString('utf-8'));
     // validate the structure of the file
-    validateOrReject(configContent)
+    await ConfigFileSchema.validateAsync(configContent)
 
     // send message using the notification wrapper
     let notificationService = new NotificationService({awsRegion: CONFIG.AWS_REGION});
