@@ -1,6 +1,6 @@
 
 import { S3Handler } from 'aws-lambda';
-import { ConfigFile, ConfigFileSchema } from '../../configFile.class';
+import { ConfigFile, ConfigFileSchemaJoi } from '../../configFile.class';
 import  { S3, CloudWatchLogs } from 'aws-sdk';
 import { CONFIG } from '../../config';
 import { SubscriptionFilters } from 'aws-sdk/clients/cloudwatchlogs';
@@ -89,7 +89,7 @@ const LambdaUpdater: S3Handler = async (event) => {
     
     // validate the structure of the file
     const configContent: ConfigFile = JSON.parse(configResponse.Body.toString('utf-8'))
-    await ConfigFileSchema.validateAsync(configContent)
+    await ConfigFileSchemaJoi.validateAsync(configContent)
 
     // ----------- ADD TRIGGERS ROUTINE -----------------
     // process all filters inside the file
