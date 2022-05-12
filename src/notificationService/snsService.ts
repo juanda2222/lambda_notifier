@@ -1,18 +1,8 @@
-import { CloudWatchLogsDecodedData } from "aws-lambda";
 import { SNS } from "aws-sdk";
 import { MessageInfoType, NotificationClientConfig, NotificationServiceClass } from ".";
 import { CONFIG } from "../config";
-import { ConfigFile, NotificationRule, SNSNotificationData } from "../configFile.class";
-
-
-export const getDefaultSubject = (logGroup: string, ruleName: string) => {
-    return `${logGroup}-${ruleName}` 
-}
-
-export const getTopicArnFromConfigFile = (configFile: ConfigFile) => {
-    return configFile.rules.map(ruleData => (ruleData.notificationData as SNSNotificationData).snsArn)
-}
-
+import {  NotificationRule, SNSNotificationData } from "../configFile.class";
+import { getDefaultSubject } from "./helpers";
 
 export class SNSService implements NotificationServiceClass{
     sns: SNS

@@ -1,7 +1,7 @@
 import Joi from "joi"
 
 // new notification systems should be included here:
-export enum NotificationType { 'sns', 'slack' }
+export type NotificationType = "sns" | "slack"
 export type NotificationData<T=SlackNotificationData, B=SNSNotificationData> = T | B
 
 
@@ -54,7 +54,7 @@ export const ConfigFileSchema: ConfigFileJoi = {
     rules: Joi.array().items(Joi.object({
         ruleName: Joi.string().required(),
         filterPattern: Joi.string().required(),
-        notificationType: Joi.string().valid( ...Object.values(NotificationType)).required(),
+        notificationType: Joi.string().valid( "sns", "slack").required(),
         notificationData: Joi.alternatives(...NotificationDataSchema)
     }).required())
 }

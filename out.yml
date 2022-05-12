@@ -20,10 +20,15 @@ Resources:
       Principal: logs.amazonaws.com
       SourceArn:
         Fn::Sub: arn:aws:logs:us-east-1:133590650843:log-group:*
+  DefaultSNSTopicForEmail:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Fn::Sub: ${AWS::StackName}--default-email-topic
   NotificationFromLogFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://cf--notification-system--testing/fe68fe74d0b0d968f8cfc4a19379a2ac
+      CodeUri: s3://cf--notification-system--testing/d95bfff424a5e5d24c59d31c2efcff6a
       FunctionName:
         Fn::Sub: ${AWS::StackName}--notification-from-log
       Handler: index.LambdaNotifierHandler
@@ -37,11 +42,15 @@ Resources:
       Environment:
         Variables:
           NOTIFICATION_CONFIG_BUCKET_NAME:
-            Fn::Sub: ${AWS::StackName}--notification-config
+            Fn::GetAtt:
+            - NotificationsConfigBucket
+            - Arn
+          DEFAULT_SNS_ARN:
+            Fn::Sub: arn:aws:sns:::${AWS::StackName}
   UpdateTriggersFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://cf--notification-system--testing/fe68fe74d0b0d968f8cfc4a19379a2ac
+      CodeUri: s3://cf--notification-system--testing/d95bfff424a5e5d24c59d31c2efcff6a
       FunctionName:
         Fn::Sub: ${AWS::StackName}--update-triggers
       Handler: index.LambdaUpdatedHandler
