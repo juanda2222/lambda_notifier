@@ -55,7 +55,7 @@ export class SNSService implements NotificationServiceClass{
 
         
         const params = {
-            Message: JSON.stringify(logEvents), 
+            Message: JSON.stringify(logEvents, null, 2), 
             Subject: notificationData.subject ?? getDefaultSubject(logGroup, ruleName),
             TopicArn:  notificationData.snsArn ?? CONFIG.DEFAULT_SNS_ARN
         }

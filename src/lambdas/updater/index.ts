@@ -81,15 +81,16 @@ const LambdaUpdater: S3Handler = async (event) => {
             const backupConfigContent: ConfigFile = JSON.parse(backupConfigContentResponse.Body.toString('utf-8'))
 
             // remove recipient
-            Object.values(backupConfigContent.rules).forEach(async rule => {
+            await Promise.all(Object.values(backupConfigContent.rules).map(async rule => {
                 await notificationService.removeRecipient({ s3Event:  event.Records[0], notificationRule: rule })
-            });
+            }))
 
             // remove file
             await s3.deleteObject({ Bucket: CONFIG.BACKUP_CONFIG_NAME, Key: fileKey }).promise()
         } catch (error) {
             throw new Error(`Could not remove recipients for '${validatedLogGroupName}'. Error: ${error}`)
         }
+        return
     }
 
     // Get the object from the event and show its content type
@@ -128,7 +129,7 @@ const LambdaUpdater: S3Handler = async (event) => {
             console.log(`Filter '${filterName}' CREATED`)
             return ruleName
         }))
-        console.log(`${filtersCreated.length} triggers created. SUMMARY: ${filtersCreated}`)
+        console.log(`${filtersCreated.length} triggers created. filter names SUMMARY: [ ${filtersCreated} ]`)
     
     } catch (error) {
         throw new Error(`Could not create filters based on file '${fileKey}'. Error: ${error}`)
@@ -145,9 +146,9 @@ const LambdaUpdater: S3Handler = async (event) => {
         }).promise()
 
         // add the recipients
-        Object.values(configContent.rules).forEach(async rule => {
+        await Promise.all(Object.values(configContent.rules).map(async rule => {
             await notificationService.setUpRecipient({ s3Event:  event.Records[0], notificationRule: rule })
-        });
+        }));
 
     } catch (error) {
         throw new Error(`Could not add the recipients info for logGroup '${validatedLogGroupName}'. Error: ${error}`)
