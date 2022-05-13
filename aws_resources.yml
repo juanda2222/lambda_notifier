@@ -19,13 +19,17 @@ Globals:
     Runtime: nodejs12.x
 
 Resources:
-  # -----START OF DELTA LAKE CONFIGURATIONS-----
 
+  # ----- STORAGE -----
   NotificationsConfigBucket:
     Type: AWS::S3::Bucket
-    # DeletionPolicy: Retain
     Properties:
       BucketName: !Sub '${AWS::StackName}--notification-config'
+
+  BackupNotificationsConfigBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}--backup-notification-config'
 
   # This should be used to optimize the cloud function build size
   # libs:
@@ -39,6 +43,7 @@ Resources:
   #     CompatibleRuntimes:
   #       - nodejs12.x    
 
+  # ---------- NOTIFICATION LAMBDA  -----------
   InvokeLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -71,6 +76,7 @@ Resources:
           DEFAULT_SNS_ARN: !Sub 'arn:aws:sns:::${AWS::StackName}'
 
 
+  # ---------- UPDATE LAMBDA  -----------
   UpdateTriggersFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -90,12 +96,9 @@ Resources:
               Action:
                 - logs:*
               Resource: '*'
-            
       Environment:
         Variables:
           LAMBDA_NOTIFIER_NAME: !Sub '${AWS::StackName}--notification-from-log'
-
-           
       Events:
         S3ConfigChangeTrigger:
           Type: S3

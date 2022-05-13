@@ -1,5 +1,5 @@
-import { CloudWatchLogsDecodedData } from "aws-lambda";
-import { ConfigFile } from "../configFile.class";
+import { CloudWatchLogsDecodedData, S3Event, S3EventRecord } from "aws-lambda";
+import { ConfigFile, NotificationRule, NotificationType } from "../configFile.class";
 import { SlackService } from "./slackService";
 import { SNSService } from "./snsService";
 export interface MessageInfoType {
@@ -8,12 +8,18 @@ export interface MessageInfoType {
 }
 export abstract class NotificationServiceClass {
     abstract sendMessage(messageInfo: MessageInfoType): Promise<void>
+    abstract setUpRecipient(recipientInfo: RecipientInfoType): Promise<void>
+    abstract removeRecipient(recipientInfo: RecipientInfoType): Promise<void>
 }
 
 export interface NotificationClientConfig {
-    type?: 'sns' | 'slack',
+    type?: NotificationType,
     awsRegion: string
+}
 
+export interface RecipientInfoType {
+    s3Event: S3EventRecord
+    notificationRule: NotificationRule,
 }
 export class NotificationService implements NotificationServiceClass{
 
@@ -37,5 +43,14 @@ export class NotificationService implements NotificationServiceClass{
     }
     async sendMessage(messageInfo: MessageInfoType){
         await this.client.sendMessage(messageInfo)
+    }
+
+    async setUpRecipient(recipientInfo: RecipientInfoType) {
+        await this.client.setUpRecipient(recipientInfo)
+
+    }
+
+    async removeRecipient(recipientInfo: RecipientInfoType) {
+        await this.client.removeRecipient(recipientInfo)
     }
 }

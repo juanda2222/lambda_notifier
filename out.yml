@@ -11,6 +11,11 @@ Resources:
     Properties:
       BucketName:
         Fn::Sub: ${AWS::StackName}--notification-config
+  BackupNotificationsConfigBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: ${AWS::StackName}--backup-notification-config
   InvokeLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -28,7 +33,7 @@ Resources:
   NotificationFromLogFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://cf--notification-system--testing/d95bfff424a5e5d24c59d31c2efcff6a
+      CodeUri: s3://cf--notification-system--testing/8c01e0a167237c4578dc57d9f0378e96
       FunctionName:
         Fn::Sub: ${AWS::StackName}--notification-from-log
       Handler: index.LambdaNotifierHandler
@@ -50,7 +55,7 @@ Resources:
   UpdateTriggersFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: s3://cf--notification-system--testing/d95bfff424a5e5d24c59d31c2efcff6a
+      CodeUri: s3://cf--notification-system--testing/8c01e0a167237c4578dc57d9f0378e96
       FunctionName:
         Fn::Sub: ${AWS::StackName}--update-triggers
       Handler: index.LambdaUpdatedHandler

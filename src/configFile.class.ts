@@ -46,7 +46,7 @@ const NotificationDataSchema = [
     Joi.object({
         snsArn: Joi.string(),
         subject: Joi.string().optional(),
-        email: Joi.string(),
+        email: Joi.string().email(),
     })
         .or('snsArn', 'email'),
 ]
