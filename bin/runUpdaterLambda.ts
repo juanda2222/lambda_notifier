@@ -4,11 +4,11 @@ import { mockS3FileCreatedEvent, mockS3FileDeletedEvent } from '../src/lambdas/u
 
 const main = async () => {
 
-    // // Use a file creation
-    // await LambdaUpdater(mockS3FileCreatedEvent, {} as Context, () => {}) // beware, context use is not safe
+    // Use a file creation
+    await LambdaUpdater(mockS3FileCreatedEvent, {} as Context, () => {}) // beware, context use is not safe
 
-    // // Use a file deletion
-    // await LambdaUpdater(mockS3FileDeletedEvent, {} as Context, () => {}) // beware, context use is not safe
+    // Use a file deletion
+    await LambdaUpdater(mockS3FileDeletedEvent, {} as Context, () => {}) // beware, context use is not safe
     
     
     const event = mockS3FileCreatedEvent

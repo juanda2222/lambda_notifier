@@ -7,7 +7,7 @@ export interface MessageInfoType {
     configFile: ConfigFile
 }
 export abstract class NotificationServiceClass {
-    abstract sendMessage(messageInfo: MessageInfoType): Promise<void>
+    abstract sendMessages(messageInfo: MessageInfoType): Promise<void>
     abstract setUpRecipient(recipientInfo: RecipientInfoType): Promise<void>
     abstract removeRecipient(recipientInfo: RecipientInfoType): Promise<void>
 }
@@ -41,8 +41,8 @@ export class NotificationService implements NotificationServiceClass{
         const classType = notificationConfig?.type ?? 'sns'
         return new notificationClass[classType](notificationConfig)
     }
-    async sendMessage(messageInfo: MessageInfoType){
-        await this.client.sendMessage(messageInfo)
+    async sendMessages(messageInfo: MessageInfoType){
+        await this.client.sendMessages(messageInfo)
     }
 
     async setUpRecipient(recipientInfo: RecipientInfoType) {

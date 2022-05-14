@@ -34,7 +34,7 @@ jest.mock('aws-sdk', () => ({
 }));  
 
 describe('LambdaUpdater', () => {
-    afterAll(() => {
+    afterEach(() => {
         jest.clearAllMocks()
     })
     test('Correct configuration is fetch from s3, filters are fetched and created', async () => {

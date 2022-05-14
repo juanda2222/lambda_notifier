@@ -1,33 +1,39 @@
 import LambdaNotifier from '.'
 import { Context } from 'aws-lambda/handler'
-import { mockCLoudWatchEvent, mockS3ConfigFileResponse, mockSNSResponse } from './mocks';
+import { mockCLoudWatchEvent, mockLogEvents, mockMultipleCloudWatchEvents, mockS3ConfigFileResponse, mockSNSResponse } from './mocks';
 
 
-const mockS3getObjectPromiseResult = jest.fn().mockReturnValue(mockS3ConfigFileResponse)
-const mockSnsPublishPromiseResult = jest.fn().mockReturnValue(mockSNSResponse)
+const mockS3getObjectPromiseResult = jest.fn().mockImplementation(() => ({promise: () => mockS3ConfigFileResponse}))
+const mockSnsPublishPromiseResult = jest.fn().mockImplementation(() => ({promise: () => mockSNSResponse}))
 
 jest.mock('aws-sdk', () => ({
     S3: jest.fn().mockImplementation(() => ({
-        getObject: jest.fn().mockImplementation(() => ({promise: mockS3getObjectPromiseResult})),
+        getObject: mockS3getObjectPromiseResult,
     })),
     SNS: jest.fn().mockImplementation(() => ({
-        publish: jest.fn().mockImplementation(() => ({promise: mockSnsPublishPromiseResult})),
+        publish: mockSnsPublishPromiseResult,
     })),
 }));  
 
 describe('LambdaNotifier', () => {
-    afterAll(() => {
+    afterEach(() => {
         jest.clearAllMocks()
     })
     test('Correct configuration is fetch from s3 and sns message is published', async () => {
         
         // beware, context use is not type safe
-        await LambdaNotifier(mockCLoudWatchEvent, {} as Context, (error, result) => {
-            if (error) console.error(error)
-            console.log(result)
-        })
+        await LambdaNotifier(mockCLoudWatchEvent, {} as Context, () => {})
 
         expect(mockS3getObjectPromiseResult).toBeCalled()
-        expect(mockSnsPublishPromiseResult).toBeCalled()
+        expect(mockSnsPublishPromiseResult).toBeCalledTimes(1)
+    })
+
+    test('Multiple logs are correctly configured and the message is published', async () => {
+        
+        // beware, context use is not type safe
+        await LambdaNotifier(mockMultipleCloudWatchEvents, {} as Context, () => {})
+
+        expect(mockS3getObjectPromiseResult).toBeCalled()
+        expect(mockSnsPublishPromiseResult).toBeCalledTimes(mockLogEvents.length)
     })
 });

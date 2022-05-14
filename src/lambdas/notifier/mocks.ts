@@ -1,9 +1,39 @@
 import { CloudWatchLogsEvent } from "aws-lambda"
 import { ConfigFile } from "../../configFile.class"
+import * as zlib from 'zlib';
+
+export const mockLogEvents = [
+    {
+        id: '36832099661152240637074993527136721115497168104861138944',
+        timestamp: 1651608470177,
+        message: 'CP ERROR ERROR: then some info'
+    },
+    {
+        id: '02394023040293094023974993527136721115497168104861138944',
+        timestamp: 1652335470174,
+        message: 'CP ERROR ERROR: this is other message'
+    }
+]
+
+
+const mockSingleCloudWatchEvent = {
+    messageType: 'DATA_MESSAGE',
+    owner: '133590650843',
+    logGroup: 'test_log_group',
+    logStream: 'log_stream_with_no_idea',
+    subscriptionFilters: [ 'my_lambda_filter' ],
+    logEvents: [ mockLogEvents[0] ]
+}
 
 export const mockCLoudWatchEvent: CloudWatchLogsEvent = {
     awslogs: {
-        data: "H4sIAAAAAAAAADWQvY7CMBCEXyVyTWHHfzFdpMtRUYXuhCxzWYKl2I5iA0KId79NpCv3m9Hszr5JgJzdCKfXDGRPvtpTa49d37eHjuxIekZYEDPOpaFK0kZwxFMaD0u6z6gUyMXibMcNbFpfFnABxZXnbbBPX242JusHcOjK90v+XfxcfIrffiqwZLL/IeFlJxcug7PXDZLzFtg9IJbV8CZ+wFyuGl5TY5RiTNa1oIprqoUxXNaacaVrhoIwmqmGUdGgjTdGCFxcPBYuLuDtTEmmsJGmTOvd/yMwPqZqPbNysSo3iFVOASofr4l8zp8/Yz9SYjIBAAA="
+        data: zlib.gzipSync(JSON.stringify(mockSingleCloudWatchEvent)).toString('base64')
+    }
+}
+
+export const mockMultipleCloudWatchEvents: CloudWatchLogsEvent = {
+    awslogs: {
+        data: zlib.gzipSync(JSON.stringify({...mockSingleCloudWatchEvent, logEvents: mockLogEvents})).toString('base64')
     }
 }
 
