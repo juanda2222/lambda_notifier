@@ -4,5 +4,5 @@ package-lock.json
 build
 layer.zip
 out.yml
-.DS_Store
 /out.yml
+.DS_Store

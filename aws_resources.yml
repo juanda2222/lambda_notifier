@@ -3,20 +3,21 @@ Transform: AWS::Serverless-2016-10-31
 Description: This template sets up all resources for the lambda notification system 
 
 # Parameters:
-  # InStrideServicesAccountID:
+  # LambdaNotifierName:
   #   Type: String
-  #   Default: '{{resolve:ssm:InStrideServicesAccountID:1}}'
-  #   Description: 12-digit AWS account ID
-
-  # UvaAcademicPartnerId:
-  #   Type: String
-  #   Default: '785983a4-dfa0-4d57-bc54-7af4f8a89f47'
-  #   Description: Academic Partner ID of UVA
+  #   Default: '${AWS::StackName}--notification-from-log'
+  #   Description: Name of the lambda in charge of the notification
 
 Globals:
   Function:
     Timeout: 10
     Runtime: nodejs12.x
+    Environment:
+      Variables:
+        LAMBDA_NOTIFIER_NAME: !Sub '${AWS::StackName}--notification-from-log'
+        NOTIFICATION_CONFIG_BUCKET_NAME: !Sub '${AWS::StackName}--notification-config'
+        BACKUP_CONFIG_NAME: !Sub '${AWS::StackName}--backup-notification-config'
+        DEFAULT_SNS_ARN: !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}--default-email-topic'
 
 Resources:
 
@@ -31,19 +32,8 @@ Resources:
     Properties:
       BucketName: !Sub '${AWS::StackName}--backup-notification-config'
 
-  # This should be used to optimize the cloud function build size
-  # libs:
-  #   Type: AWS::Lambda::LayerVersion
-  #   Properties:
-  #     LayerName: !Sub '${AWS::StackName}--layer'
-  #     Description: Dependencies for the notification app.
-  #     Content:
-  #       S3Bucket: !Sub '${AWS::StackName}--notification-config'
-  #       S3Key: layer.zip
-  #     CompatibleRuntimes:
-  #       - nodejs12.x    
 
-  # ---------- NOTIFICATION LAMBDA  -----------
+  # ---------- COMMUNICATION  -----------
   DefaultSNSTopicForEmail:
     Type: AWS::SNS::Topic
     Properties:
@@ -53,16 +43,20 @@ Resources:
       - NotificationFromLogFunction
       - UpdateTriggersFunction
 
+
+  # ---------- AUTHORIZATION  -----------
   InvokeLambdaPermission:
     Type: AWS::Lambda::Permission
     Properties:
       FunctionName: !Sub '${AWS::StackName}--notification-from-log'
       Action: lambda:InvokeFunction
       Principal: logs.amazonaws.com
-      SourceArn: !Sub 'arn:aws:logs:us-east-1:133590650843:log-group:*'
+      SourceArn: !Sub 'arn:aws:logs:::log-group:*'
     
     DependsOn: NotificationFromLogFunction
   
+
+  # ---------- COMPUTING  -----------
   NotificationFromLogFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -79,17 +73,8 @@ Resources:
             - Effect: Allow
               Action:
                 - sns:*
-              Resource: !Sub 'arn:aws:sns:us-east-1:133590650843:${AWS::StackName}--default-email-topic'
-      Environment:
-        Variables:
-          LAMBDA_NOTIFIER_NAME: !Sub '${AWS::StackName}--notification-from-log'
-          NOTIFICATION_CONFIG_BUCKET_NAME: !Sub '${AWS::StackName}--notification-config'
-          BACKUP_CONFIG_NAME: !Sub '${AWS::StackName}--backup-notification-config'
-          DEFAULT_SNS_ARN: !Sub 'arn:aws:sns:us-east-1:133590650843:${AWS::StackName}--default-email-topic'
+              Resource: !Sub 'arn:aws:sns:::${AWS::StackName}--default-email-topic'
 
-    
-
-  # ---------- UPDATE LAMBDA  -----------
   UpdateTriggersFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -113,14 +98,7 @@ Resources:
               Effect: Allow
               Action:
                 - sns:*
-              Resource: !Sub 'arn:aws:sns:us-east-1:133590650843:${AWS::StackName}--default-email-topic'
-
-      Environment:
-        Variables:
-          LAMBDA_NOTIFIER_NAME: !Sub '${AWS::StackName}--notification-from-log'
-          NOTIFICATION_CONFIG_BUCKET_NAME: !Sub '${AWS::StackName}--notification-config'
-          BACKUP_CONFIG_NAME: !Sub '${AWS::StackName}--backup-notification-config'
-          DEFAULT_SNS_ARN: !Sub 'arn:aws:sns:us-east-1:133590650843:${AWS::StackName}--default-email-topic'
+              Resource: !Sub 'arn:aws:sns:::${AWS::StackName}--default-email-topic'
       Events:
         S3ConfigChangeTrigger:
           Type: S3

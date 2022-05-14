@@ -2,7 +2,7 @@ import { EnvVariables } from "./environmentVariables.enum";
 
 require('dotenv').config();
 
-const AWS_REGION = process.env[EnvVariables.AWS_REGION] ?? 'us-east-1'
+const AWS_REGION = process.env[EnvVariables.AWS_REGION] ?? 'us-east-1' // this one is given automatically by the cloud function runtime
 const AWS_ACCOUNT_ID = process.env[EnvVariables.AWS_ACCOUNT_ID] ?? '133590650843'
 const LAMBDA_NOTIFIER_NAME = process.env[EnvVariables.LAMBDA_NOTIFIER_NAME] ?? 'notification-from-log'
 
