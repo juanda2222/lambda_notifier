@@ -30,9 +30,24 @@ export const mockBadConfigFile = {
 
     ]
 }
+export const mockEmailForDefaultSubscription = 'some-email@email.com'
+export const mockConfigFileWithEmail: ConfigFile = {
+    rules: [
+        {
+            filterPattern: "CP ERROR ERROR: ",
+            ruleName: "error",
+            notificationType: 'sns',
+            notificationData: {
+                email: mockEmailForDefaultSubscription
+            }
+        }
+
+    ]
+}
 
 export const mockS3ConfigFileResponse = { Body: {toString: () => JSON.stringify(mockConfigFile)}}
 export const mockBadS3ConfigFileResponse = { Body: {toString: () => JSON.stringify(mockBadConfigFile)}}
+export const mockS3ConfigFileWithEmailResponse = { Body: {toString: () => JSON.stringify(mockConfigFileWithEmail)}}
 
 export const mockSNSResponse = {
     ResponseMetadata: { RequestId: 'a848e404-66f1-544b-8017-beea6a1a5524' },

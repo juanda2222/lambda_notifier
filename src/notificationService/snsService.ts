@@ -16,30 +16,36 @@ export class SNSService implements NotificationServiceClass{
         const { notificationRule } = recipientInfo
         const { notificationData } = notificationRule
         const { email, snsArn} = notificationData as SNSNotificationData
-        const TopicArn = snsArn ?? CONFIG.DEFAULT_SNS_ARN
+
+        if (!!snsArn) {
+            return // do not setup anything if the rule has the topic
+        }
     
         const params = {
             Protocol: 'Email',
-            TopicArn,
+            TopicArn: CONFIG.DEFAULT_SNS_ARN,
             Endpoint: email
         };
         
         await this.sns.subscribe(params).promise();
-        console.log(`Email ${email} SUBSCRIBED to topic ${TopicArn}`)
+        console.log(`Email ${email} SUBSCRIBED to topic default topic`)
     }
 
     async removeRecipient(recipientInfo: RecipientInfoType) {
         const { notificationRule } = recipientInfo
         const { notificationData } = notificationRule
         const { email, snsArn} = notificationData as SNSNotificationData
-        const TopicArn = snsArn ?? CONFIG.DEFAULT_SNS_ARN
+        
+        if (!!snsArn) {
+            return // do not remove anything if the rule has the topic
+        }
 
         // TODO: 'NextToken' property should be used to fetch remaining subscriptions on further requests
-        const { Subscriptions } = await this.sns.listSubscriptionsByTopic({ TopicArn }).promise();
-
+        const { Subscriptions } = await this.sns.listSubscriptionsByTopic({ TopicArn: CONFIG.DEFAULT_SNS_ARN }).promise();
         const { SubscriptionArn } = Subscriptions.find(subscription => subscription.Endpoint == email)
+
         await this.sns.unsubscribe({ SubscriptionArn }).promise()
-        console.log(`Email ${email} UNSUBSCRIBED to topic ${TopicArn}`)
+        console.log(`Email ${email} UNSUBSCRIBED to topic ${CONFIG.DEFAULT_SNS_ARN}`)
     }
 
     async sendMessage({ decodedLog, configFile }: MessageInfoType){
