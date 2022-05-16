@@ -7,8 +7,11 @@
         "preserveConstEnums": true,
         "sourceMap": true,
         "esModuleInterop": true,
-        "experimentalDecorators": true
+        "experimentalDecorators": true,
+        "outDir": "build",
+        "resolveJsonModule": true
+
     },
-    "include": ["src/**/*", "index.ts"],
-    "exclude": ["node_modules", "**/*.spec.ts"]
+    "include": [".", "./package.json"],
+    "exclude": ["node_modules", "**/*.spec.ts", "**/*.test.ts"]
 }

@@ -1,13 +1,13 @@
 
 import { S3Handler } from 'aws-lambda';
-import { ConfigFile } from '../../configFile.class';
+import { ConfigFile, ConfigFileSchemaJoi, NotificationRule } from '../../configFile.class';
 import  { S3, CloudWatchLogs } from 'aws-sdk';
 import { CONFIG } from '../../config';
-import { validateOrReject } from 'class-validator';
 import { SubscriptionFilters } from 'aws-sdk/clients/cloudwatchlogs';
+import { NotificationService } from '../../notificationService';
 
 const FILTER_NAME_PREFIX = "auto-notification--"
-const formatFilterNameFromConfigRuleName = (configRuleName: string) => {
+export const formatFilterNameFromConfigRuleName = (configRuleName: string) => {
     return `${FILTER_NAME_PREFIX}${configRuleName}`
 }
 
@@ -17,19 +17,31 @@ const isANotificationFilter = (filterName: string) => {
 
 const validateFileKeyAsLogGroup = (fileKey: string) => {
     // TODO: do some format validations because the rules for a groupLogName are different from the rules of an s3 file
-    return fileKey
+    
+    // check if the file is json
+    if (!((new RegExp(".json$", "i")).test(fileKey))){
+        throw new Error("File is not json. Check the extension")
+    }
+
+    // remove the json file
+    let logGroup = fileKey.substring(0, fileKey.lastIndexOf('.'))
+
+    return logGroup
 }
 
 
-const lambdaUpdater: S3Handler = async (event) => {
+const LambdaUpdater: S3Handler = async (event) => {
 
     // get the important information from the event
+    console.log(`PROCESSING '${event.Records[0].eventName}' EVENT `)
     const fileKey = decodeURIComponent(event.Records[0].s3.object.key.replace(/\+/g, ' '));
+    const bucket = event.Records[0].s3.bucket.name;
     const validatedLogGroupName = validateFileKeyAsLogGroup(fileKey)
 
     // instance apis
     let cwl = new CloudWatchLogs({apiVersion: '2014-03-28', region: CONFIG.AWS_REGION});
     let s3 = new S3({ apiVersion: '2006-03-01' });
+    let notificationService = new NotificationService({awsRegion: CONFIG.AWS_REGION});
 
     // ----------- DELETE TRIGGERS ROUTINE -----------------
     // use the object key to delete the trigger if the file was deleted
@@ -54,28 +66,49 @@ const lambdaUpdater: S3Handler = async (event) => {
         try {
             const filtersDeleted = await Promise.all(automaticNotificationFilters.map( async ({filterName, logGroupName}) => {
                 await cwl.deleteSubscriptionFilter({ filterName, logGroupName }).promise()
+                console.log(`Filter '${filterName}' DELETED`)
                 return filterName
             }))
-            console.log(`${filtersDeleted.length} triggers DELETED. Result: ${filtersDeleted}`)
-            return
+            console.log(`${filtersDeleted.length} triggers deleted. SUMMARY: ${filtersDeleted}`)
         } catch (error) {
             throw new Error(`Could not delete filters '${automaticNotificationFilters.map(filterDescription => filterDescription.filterName)}'. Error: ${error}`)
         }
+
+        // unsubscribe recipients
+        try {
+            // get the recipients associated to the file
+            const backupConfigContentResponse = await s3.getObject({ Bucket: CONFIG.BACKUP_CONFIG_NAME, Key: fileKey }).promise()
+            const backupConfigContent: ConfigFile = JSON.parse(backupConfigContentResponse.Body.toString('utf-8'))
+
+            // remove recipient
+            await Promise.all(Object.values(backupConfigContent.rules).map(async rule => {
+                await notificationService.removeRecipient({ s3Event:  event.Records[0], notificationRule: rule })
+            }))
+
+            // remove file
+            await s3.deleteObject({ Bucket: CONFIG.BACKUP_CONFIG_NAME, Key: fileKey }).promise()
+        } catch (error) {
+            throw new Error(`Could not remove recipients for '${validatedLogGroupName}'. Error: ${error}`)
+        }
+        return
     }
 
     // Get the object from the event and show its content type
-    const bucket = event.Records[0].s3.bucket.name;
     const fileRequestParams = {
         Bucket: bucket,
         Key: fileKey,
     }; 
-    let configContent: ConfigFile;
-    const configResponse = await s3.getObject(fileRequestParams).promise();
-    configContent = JSON.parse(configResponse.Body.toString('utf-8'))
-
-
+    let configResponse
+    try {
+        configResponse = await s3.getObject(fileRequestParams).promise()
+    } catch (error) {
+        throw new Error(`Could not read configFile. Wrong bucketName or teamName. Error: ${error}`)
+    }
+        
+    
     // validate the structure of the file
-    validateOrReject(configContent)
+    const configContent: ConfigFile = JSON.parse(configResponse.Body.toString('utf-8'))
+    await ConfigFileSchemaJoi.validateAsync(configContent)
 
     // ----------- ADD TRIGGERS ROUTINE -----------------
     // process all filters inside the file
@@ -85,23 +118,41 @@ const lambdaUpdater: S3Handler = async (event) => {
 
             // Create the CloudWatchLogs service object
             const { filterPattern, ruleName } = rule
+            const filterName = formatFilterNameFromConfigRuleName(ruleName)
             let params = {
                 destinationArn: CONFIG.NOTIFICATION_LAMBDA_ARN,
-                filterName: formatFilterNameFromConfigRuleName(ruleName),
+                filterName,
                 filterPattern,
                 logGroupName: validatedLogGroupName,
             }
-    
             await cwl.putSubscriptionFilter(params).promise();
+            console.log(`Filter '${filterName}' CREATED`)
             return ruleName
         }))
-        console.log(`${filtersCreated.length} triggers CREATED. Result: ${filtersCreated}`)
-        return;
+        console.log(`${filtersCreated.length} triggers created. filter names SUMMARY: [ ${filtersCreated} ]`)
     
     } catch (error) {
         throw new Error(`Could not create filters based on file '${fileKey}'. Error: ${error}`)
     }
+
+    // subscribe recipients
+    try {
+
+        // add the recipients associated to the file
+        await s3.putObject({ 
+            Bucket: CONFIG.BACKUP_CONFIG_NAME, 
+            Key: fileKey, 
+            Body: Buffer.from(JSON.stringify(configContent))
+        }).promise()
+
+        // add the recipients
+        await Promise.all(Object.values(configContent.rules).map(async rule => {
+            await notificationService.setUpRecipient({ s3Event:  event.Records[0], notificationRule: rule })
+        }));
+
+    } catch (error) {
+        throw new Error(`Could not add the recipients info for logGroup '${validatedLogGroupName}'. Error: ${error}`)
+    }
 };
 
-exports.handler = lambdaUpdater
-export default lambdaUpdater
+export default LambdaUpdater

@@ -9,6 +9,10 @@ const main = async () => {
 
     // Use a file deletion
     await LambdaUpdater(mockS3FileDeletedEvent, {} as Context, () => {}) // beware, context use is not safe
+    
+    
+    const event = mockS3FileCreatedEvent
+    await LambdaUpdater(event, {} as Context, () => {}) // beware, context use is not safe
 }
 
 main().catch(err => {

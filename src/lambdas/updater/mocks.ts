@@ -1,3 +1,6 @@
+import { Subscription } from "aws-sdk/clients/sns"
+import { mockEmailForDefaultSubscription } from "../notifier/mocks"
+
 export const mockS3FileCreatedEvent = {
     "Records": [
         {
@@ -27,7 +30,7 @@ export const mockS3FileCreatedEvent = {
                     "arn": "arn:aws:s3:::example-bucket"
                 },
                 "object": {
-                    "key": "HappyFace.jpg",
+                    "key": "HappyFace.json",
                     "size": 1024,
                     "eTag": "0123456789abcdef0123456789abcdef",
                     "sequencer": "0A1B2C3D4E5F678901"
@@ -66,7 +69,7 @@ export const mockS3FileDeletedEvent = {
                   "arn": "arn:aws:s3:::example-bucket"
               },
               "object": {
-                  "key": "HappyFace.jpg",
+                  "key": "HappyFace.json",
                   "size": 1024,
                   "eTag": "0123456789abcdef0123456789abcdef",
                   "sequencer": "0A1B2C3D4E5F678901"
@@ -95,4 +98,32 @@ export const mockCwlDescribeSubscriptionFiltersResponse = {
         creationTime: 1651603151760
       }
     ]
+  }
+
+
+  export const mockListSubscriptionsByTopic: { Subscriptions: Subscription[], NextToken: string } = {
+    Subscriptions: [
+        {
+            SubscriptionArn: 'arn:aws:sns:us-east-1:1330650843:function:subscriptor',
+            Owner: "123432323",
+            Protocol: 'Email',
+            Endpoint: mockEmailForDefaultSubscription,
+            TopicArn:  `arn:aws:sns:us-east-1:123432323:default-email-topic`
+        },
+        {
+            SubscriptionArn: 'arn:aws:sns:us-east-1:1330650843:function:subscriptor',
+            Owner: "123432323",
+            Protocol: 'Email',
+            Endpoint: 'some-other@email.com',
+            TopicArn:  `arn:aws:sns:us-east-1:123432323:default-email-topic`
+        },
+        {
+            SubscriptionArn: 'arn:aws:sns:us-east-1:1330650843:function:subscriptor2',
+            Owner: "123432323",
+            Protocol: 'HTTPS',
+            Endpoint: 'https://some-domain.com',
+            TopicArn:  `arn:aws:sns:us-east-1:123432323:default-email-topic`
+        },
+    ],
+    NextToken: '3498ruehjlkrgnalefg90dfpjspdof'
   }

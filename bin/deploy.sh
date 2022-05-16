@@ -42,6 +42,8 @@ then
   exit 1;
 fi
 
+
+
 # format parameters into ready to use arguments for aws cli
 get_profile() {
   if [ -n "${profile}" ];
@@ -53,15 +55,22 @@ get_profile() {
 }
 
 
-# if ! aws s3api wait bucket-exists --bucket $stack --region $region $(get_profile); then
-#   echo "creating s3 bucket for deploy"
-#   aws s3 mb s3://$stack --region $region $(get_profile)
-# fi
 
-echo "Packaging stack on ${stack}"
-aws cloudformation package --region $region $(get_profile) --template-file ./aws_resources.yml --s3-bucket $stack --output-template-file out.yml
 
-echo "Deploying stack ${stack}"
-aws cloudformation deploy --region $region $(get_profile) --template-file out.yml --stack-name $stack
+# create a bucket to upload the build files for the CloudFormation job
+staging_bucket_name="cf--notification-system--${stack}"
+echo "> BUCKET NAME ${staging_bucket_name}"
+if ! aws s3 ls | awk '{print $NF}' | grep -w $staging_bucket_name; then
+  echo "> Creating s3 bucket for deploy "
+  aws s3 mb s3://$staging_bucket_name --region $region $(get_profile)
+fi
 
-echo "Deploy Completed"
+# upload files to staging s3 bucket
+echo "> Packaging stack on ${stack}"
+aws cloudformation package --region $region $(get_profile) --template-file ./aws_resources.yml --s3-bucket $staging_bucket_name --output-template-file out.yml
+
+# deploy files from the staging s3 bucket
+echo "> Deploying stack ${stack}"
+aws cloudformation deploy --region $region $(get_profile) --template-file out.yml --stack-name $stack --capabilities CAPABILITY_IAM
+
+echo "> Deploy Completed"

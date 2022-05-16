@@ -1,3 +1,8 @@
 node_modules
 .env
 package-lock.json
+build
+layer.zip
+out.yml
+/out.yml
+.DS_Store
