@@ -1,0 +1,13 @@
+{
+    "rules": [
+        {
+            "filterPattern": "ERROR ",
+            "ruleName": "error",
+            "notificationType": "sns",
+            "notificationData": {
+                "email": "juandavid.ramirez@globant.com"
+            }
+        }
+
+    ]
+}

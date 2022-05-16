@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: This template sets up all resources for the lambda notification system 
+
+# Parameters:
+  # LambdaNotifierName:
+  #   Type: String
+  #   Default: '${AWS::StackName}--notification-from-log'
+  #   Description: Name of the lambda in charge of the notification
+
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: nodejs12.x
+    Environment:
+      Variables:
+        LAMBDA_NOTIFIER_NAME: !Sub '${AWS::StackName}--notification-from-log'
+        NOTIFICATION_CONFIG_BUCKET_NAME: !Sub '${AWS::StackName}--notification-config'
+        BACKUP_CONFIG_NAME: !Sub '${AWS::StackName}--backup-notification-config'
+        DEFAULT_SNS_ARN: !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${AWS::StackName}--default-email-topic'
+
+Resources:
+
+  # ----- STORAGE -----
+  NotificationsConfigBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}--notification-config'
+
+  BackupNotificationsConfigBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${AWS::StackName}--backup-notification-config'
+
+
+  # ---------- COMMUNICATION  -----------
+  DefaultSNSTopicForEmail:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${AWS::StackName}--default-email-topic'
+
+    DependsOn: 
+      - NotificationFromLogFunction
+      - UpdateTriggersFunction
+
+
+  # ---------- AUTHORIZATION  -----------
+  InvokeLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Sub '${AWS::StackName}--notification-from-log'
+      Action: lambda:InvokeFunction
+      Principal: logs.amazonaws.com
+      SourceArn: !Sub 'arn:aws:logs:::log-group:*'
+    
+    DependsOn: NotificationFromLogFunction
+  
+
+  # ---------- COMPUTING  -----------
+  NotificationFromLogFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: build
+      FunctionName: !Sub '${AWS::StackName}--notification-from-log'
+      Handler: index.LambdaNotifierHandler
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:*
+              Resource: '*'
+            - Effect: Allow
+              Action:
+                - sns:*
+              Resource: !Sub 'arn:aws:sns:::${AWS::StackName}--default-email-topic'
+
+  UpdateTriggersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: build
+      FunctionName: !Sub '${AWS::StackName}--update-triggers'
+      Handler: index.LambdaUpdatedHandler
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Sid: ReadS3ConfigFiles
+              Effect: Allow
+              Action:
+                - s3:*
+              Resource: '*'
+            - Sid: MakeLogsFilters
+              Effect: Allow
+              Action:
+                - logs:*
+              Resource: '*'
+            - Sid: AllowSNSAccess
+              Effect: Allow
+              Action:
+                - sns:*
+              Resource: !Sub 'arn:aws:sns:::${AWS::StackName}--default-email-topic'
+      Events:
+        S3ConfigChangeTrigger:
+          Type: S3
+          Properties:
+            Bucket: !Ref NotificationsConfigBucket
+            Events: 
+              - s3:ObjectCreated:*
+              - s3:ObjectRemoved:*
+      # Layers:
+      #   - !Ref libs
+
